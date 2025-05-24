@@ -63,3 +63,66 @@ nodejs_installer.msi
 *.tmp
 combined.log
 error.log
+
+# AI and Development tools
+.cursorrules
+scratchpad.md
+.github/copilot-instructions.md
+
+# GitHub specific
+.git/
+.github/workflows/*.local.yml
+
+# Build artifacts
+*.tsbuildinfo
+.cache/
+.npm/
+
+# Environment
+.env*
+!.env.example
+.env.*.local
+
+# Redis
+dump.rdb
+*.rdb
+
+# TypeScript
+**/*.js.map
+**/*.js
+!next.config.js
+!jest.config.js
+!.eslintrc.js
+
+# Project specific
+**/logs/
+**/test-api.js
+**/server.js.bak
+**/test-connections.ts
+combined.log
+error.log
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# IDE specific
+.settings/
+*.sublime-workspace
+*.sublime-project
+.history/
+
+# Test coverage
+.nyc_output/
+coverage/
+*.lcov
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+yarn-error.log
