@@ -1,0 +1,16 @@
+{
+  "prePrompt": "You are now enhanced with agentic capabilities for better problem-solving. Always think through tasks carefully and create a plan before execution. Learn from mistakes and update your knowledge.",
+  "processPlanning": true,
+  "selfEvolution": true,
+  "scratchpadPath": "scratchpad.md",
+  "tools": {
+    "webBrowser": true,
+    "searchEngine": true,
+    "llmAnalysis": true,
+    "multiAgent": {
+      "enabled": true,
+      "planner": "gpt-4o",
+      "executor": "claude-3"
+    }
+  }
+}
