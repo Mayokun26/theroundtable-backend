@@ -1,10 +1,10 @@
 {
   "name": "theroundtable-backend",
   "version": "0.1.0",
-  "private": true,
-  "scripts": {
+  "private": true,  "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npm run build:lambda",
+    "build:lambda": "zip -r dist/lambda.zip dist/*",
     "start": "node dist/index.js",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
