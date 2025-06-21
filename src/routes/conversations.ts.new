@@ -7,11 +7,24 @@ import { getRedisClient, isRedisEnabled } from '../config/redis';
 
 export const conversationRoutes = express.Router();
 
+// Define types for character data
+interface CharacterDetail {
+  characterId?: string;
+  id?: string;
+  name: string;
+  era?: string;
+  traits?: string[];
+  background?: string;
+}
+
 // Create a new conversation or add a message
 conversationRoutes.post('/', async (req, res) => {
   const { message, characters } = req.body;
   
+  logger.info(`Received conversation request with message: "${message?.substring(0, 20)}${message?.length > 20 ? '...' : ''}" and ${characters?.length || 0} characters`);
+  
   if (!message || !characters || !Array.isArray(characters)) {
+    logger.warn('Invalid request received:', { message: !!message, characters: !!characters, isArray: Array.isArray(characters) });
     return res.status(400).json({
       status: 'error',
       message: 'Invalid request. Please provide a message and an array of character IDs.'
@@ -21,32 +34,118 @@ conversationRoutes.post('/', async (req, res) => {
   try {
     // Generate a conversation ID if this is a new conversation
     const conversationId = req.body.conversationId || uuidv4();
+    logger.info(`Processing conversation ID: ${conversationId}`);
 
-    // In a real implementation, we would:
-    // 1. Store the message in DynamoDB
-    // 2. Process the message through an AI service for each character
-    // 3. Store the responses in DynamoDB
-    // 4. Return the responses to the client
-    
-    // For now, we'll generate mock responses
-    const responses = characters.map(characterId => {
-      const name = 
-        characterId === '1' ? 'Socrates' : 
-        characterId === '2' ? 'Marie Curie' : 
-        characterId === '3' ? 'Sun Tzu' : 
-        `Character ${characterId}`;
+    // Helper function to generate default character details
+    function getDefaultCharacterById(id: string): CharacterDetail {
+      const defaultCharacters: Record<string, CharacterDetail> = {
+        '1': { 
+          id: '1', 
+          name: 'Socrates',
+          era: 'Ancient Greece',
+          traits: ['philosophical', 'questioning'],
+          background: 'Classical Greek philosopher credited as one of the founders of Western philosophy.'
+        },
+        '2': { 
+          id: '2', 
+          name: 'Marie Curie',
+          era: 'Modern Era',
+          traits: ['scientific', 'determined'],
+          background: 'Physicist and chemist who conducted pioneering research on radioactivity.'
+        },
+        '3': { 
+          id: '3', 
+          name: 'Sun Tzu',
+          era: 'Ancient China',
+          traits: ['strategic', 'wise'],
+          background: 'Chinese general, military strategist, writer, and philosopher known for "The Art of War".'
+        },
+        '4': { 
+          id: '4', 
+          name: 'Leonardo da Vinci',
+          era: 'Renaissance',
+          traits: ['creative', 'inventive'],
+          background: 'Italian polymath of the Renaissance whose areas of interest included invention, drawing, painting, sculpture, architecture, science, music, mathematics, engineering, literature, anatomy, geology, astronomy, botany, paleontology, and cartography.'
+        },
+        '5': { 
+          id: '5', 
+          name: 'William Shakespeare',
+          era: 'Elizabethan Era',
+          traits: ['poetic', 'dramatic'],
+          background: 'English playwright, poet, and actor, widely regarded as the greatest writer in the English language and the world\'s greatest dramatist.'
+        }
+      };
       
-      // Generate mock responses based on the character
-      let content = '';
-      if (characterId === '1') {
-        content = `I must question you on this: "${message}". What do you truly mean by that? As I always say, the unexamined life is not worth living.`;
-      } else if (characterId === '2') {
-        content = `Interesting question: "${message}". In my scientific observations, I have found that one must never lose curiosity. Nothing in life is to be feared, it is only to be understood.`;
-      } else if (characterId === '3') {
-        content = `When you ask "${message}", you must consider the strategic implications. Know yourself, know your enemy, and you need not fear the result of a hundred battles.`;
+      return defaultCharacters[id] || { 
+        id, 
+        name: `Character ${id}`,
+        traits: ['generic'],
+        era: 'Unknown',
+        background: 'A historical figure'
+      };
+    }
+    
+    // Helper function to generate character-specific responses
+    function generateCharacterResponse(userMessage: string, character: CharacterDetail): string {
+      // Default response if we can't create a specific one
+      let content = `This is a response from ${character.name} to your message: "${userMessage}"`;
+      
+      const characterId = character.characterId || character.id;
+      
+      // Generate specific responses based on character
+      if (characterId === '1') { // Socrates
+        content = `I must question you on this: "${userMessage}". What do you truly mean by that? As I always say, the unexamined life is not worth living.`;
+      } else if (characterId === '2') { // Marie Curie
+        content = `Interesting question: "${userMessage}". In my scientific observations, I have found that one must never lose curiosity. Nothing in life is to be feared, it is only to be understood.`;
+      } else if (characterId === '3') { // Sun Tzu
+        content = `When you ask "${userMessage}", you must consider the strategic implications. Know yourself, know your enemy, and you need not fear the result of a hundred battles.`;
+      } else if (characterId === '4') { // Leonardo da Vinci
+        content = `Your inquiry about "${userMessage}" fascinates me. I believe simplicity is the ultimate sophistication. Let us examine this from multiple perspectives.`;
+      } else if (characterId === '5') { // Shakespeare
+        content = `To ponder "${userMessage}" or not to ponder, that is the question! All the world's a stage, and all the men and women merely players. Let me share my thoughts on this matter.`;
       } else {
-        content = `This is a response from character ${characterId} to your message: "${message}"`;
+        // For other characters, use their traits and background to inform the response
+        if (character.name && character.background) {
+          content = `As ${character.name}, ${character.background.split('.')[0]}. I find your question about "${userMessage}" most intriguing.`;
+        }
       }
+      
+      return content;
+    }
+
+    // Get character details to personalize responses
+    const characterDetails: CharacterDetail[] = await Promise.all(
+      characters.map(async (characterId: string) => {
+        try {
+          // Try to fetch character details from DynamoDB
+          const getResult = await dynamoDB.send(new GetCommand({
+            TableName: TableNames.CHARACTERS,
+            Key: { 
+              characterId: characterId 
+            }
+          }));
+          
+          if (getResult.Item) {
+            logger.info(`Found character details for ID ${characterId}`);
+            return getResult.Item as CharacterDetail;
+          }
+        } catch (error) {
+          logger.warn(`Failed to get character details for ID ${characterId}:`, error);
+        }
+        
+        // Fallback to default character details based on ID
+        return getDefaultCharacterById(characterId);
+      })
+    );
+    
+    // Generate responses for each character
+    const responses = characterDetails.map(character => {
+      // Use character details or fallback to defaults
+      const characterId = character.characterId || character.id;
+      const name = character.name || `Character ${characterId}`;
+      
+      // Generate personalized response based on character traits and background
+      let content = generateCharacterResponse(message, character);
       
       return {
         id: uuidv4(),
@@ -58,104 +157,72 @@ conversationRoutes.post('/', async (req, res) => {
     });
     
     // In a production scenario, we would save this to DynamoDB
-    // For now we'll just return the mock data
-    res.status(201).json({
+    logger.info(`Generated ${responses.length} responses for conversation ${conversationId}`);
+    
+    // Return the responses to the client
+    return res.status(201).json({
       status: 'success',
+      message: 'Responses generated successfully',
       data: {
         conversationId,
         responses
       }
     });
   } catch (error) {
-    logger.error('Error creating conversation:', error);
-    res.status(500).json({
+    logger.error('Error processing conversation:', error);
+    return res.status(500).json({
       status: 'error',
-      message: 'Failed to create conversation'
+      message: 'An error occurred while processing your message',
+      error: process.env.NODE_ENV === 'development' ? String(error) : undefined
     });
   }
 });
 
 // Get conversation history
-conversationRoutes.get('/:id', async (req, res) => {
-  const { id } = req.params;
+conversationRoutes.get('/:conversationId', async (req, res) => {
+  const { conversationId } = req.params;
+  
+  if (!conversationId) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Conversation ID is required'
+    });
+  }
   
   try {
-    // Try to get from Redis cache first
-    const redisClient = getRedisClient();
-    const cacheKey = `conversation:${id}`;
-    
-    if (isRedisEnabled() && redisClient) {
-      const cachedData = await redisClient.get(cacheKey);
-      if (cachedData) {
-        logger.info(`Returning conversation ${id} from cache`);
-        return res.status(200).json(JSON.parse(cachedData));
-      }
-    }
-    
-    // In a real implementation, we would fetch from DynamoDB
-    // For now, generate mock conversation data
-    
-    // Mock conversation data
-    const conversation = {
-      id,
-      messages: [
-        {
-          id: 'msg1',
-          sender: 'user',
-          content: 'What do you think about knowledge and wisdom?',
-          timestamp: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: 'msg2',
-          sender: 'character',
-          characterId: '1',
-          characterName: 'Socrates',
-          content: 'True wisdom comes to each of us when we realize how little we understand about life, ourselves, and the world around us.',
-          timestamp: new Date(Date.now() - 3580000).toISOString()
-        },
-        {
-          id: 'msg3',
-          sender: 'character',
-          characterId: '2',
-          characterName: 'Marie Curie',
-          content: 'Nothing in life is to be feared, it is only to be understood. Now is the time to understand more, so that we may fear less.',
-          timestamp: new Date(Date.now() - 3560000).toISOString()
-        },
-        {
-          id: 'msg4',
-          sender: 'user',
-          content: 'How do you approach challenges?',
-          timestamp: new Date(Date.now() - 1800000).toISOString()
-        },
-        {
-          id: 'msg5',
-          sender: 'character',
-          characterId: '1',
-          characterName: 'Socrates',
-          content: 'The secret of change is to focus all of your energy, not on fighting the old, but on building the new.',
-          timestamp: new Date(Date.now() - 1780000).toISOString()
-        }
-      ],
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    const response = {
+    // In a real implementation, we would fetch conversation history from DynamoDB
+    // For now, return a mock response
+    return res.status(200).json({
       status: 'success',
-      data: conversation
-    };
-    
-    // Cache the result for future requests (5 minutes)
-    if (isRedisEnabled() && redisClient) {
-      await redisClient.set(cacheKey, JSON.stringify(response), 'EX', 300);
-    }
-    
-    return res.status(200).json(response);
+      message: 'Conversation retrieved successfully',
+      data: {
+        conversationId,
+        messages: [
+          {
+            id: '1',
+            content: 'Hello, this is a test conversation',
+            sender: 'user',
+            timestamp: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+          },
+          {
+            id: '2',
+            content: 'Greetings! How may I assist you today?',
+            sender: 'character',
+            character: {
+              id: '1',
+              name: 'Socrates'
+            },
+            timestamp: new Date(Date.now() - 3500000).toISOString() // 58 minutes ago
+          }
+        ]
+      }
+    });
   } catch (error) {
-    logger.error(`Error retrieving conversation ${id}:`, error);
+    logger.error('Error retrieving conversation:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to retrieve conversation'
+      message: 'An error occurred while retrieving the conversation',
+      error: process.env.NODE_ENV === 'development' ? String(error) : undefined
     });
   }
 });
