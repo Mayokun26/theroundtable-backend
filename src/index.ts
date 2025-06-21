@@ -1,41 +1,59 @@
 import dotenv from 'dotenv';
 import { createServer } from './server';
 import { logger } from './utils/logger';
-import { connectDB } from './config/database';
 import { createRedisClient, isRedisEnabled } from './config/redis';
+import { checkDynamoDBConnection } from './config/dynamodb';
 
+// Load environment variables first
 dotenv.config();
 
 const port = process.env.PORT || 3001;
 
 async function startServer() {
   try {
-    // Connect to MongoDB
-    await connectDB();
-    logger.info('Connected to MongoDB');
-
-    // Initialize Redis - but don't stop if it fails
-    try {
-      await createRedisClient();
-      if (isRedisEnabled()) {
-        logger.info('Connected to Redis');
-      } else {
-        logger.warn('Redis is disabled, application will continue with limited functionality');
+    // In Lambda environment, don't fail startup due to connection issues
+    // as they will be handled per-request
+    if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      logger.info('Running in Lambda environment - skipping connection checks');
+    } else {
+      // Check DynamoDB connection only in local development
+      try {
+        await checkDynamoDBConnection();
+        logger.info('DynamoDB connection verified');
+      } catch (error) {
+        logger.warn('DynamoDB connection failed, continuing anyway:', error);
       }
-    } catch (error) {
-      logger.warn('Failed to connect to Redis, continuing without Redis:', error);
+
+      // Initialize Redis - but don't stop if it fails
+      try {
+        await createRedisClient();
+        if (isRedisEnabled()) {
+          logger.info('Connected to Redis');
+        } else {
+          logger.warn('Redis is disabled, application will continue with limited functionality');
+        }
+      } catch (error) {
+        logger.warn('Failed to connect to Redis, continuing without Redis:', error);
+      }
     }
 
-    // Create and start the server
-    const server = createServer();
-    server.listen(port, () => {
-      logger.info(`Server is running on port ${port}`);
-    });
+    // Create and start the server (only for local development)
+    if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      const server = createServer();
+      server.listen(port, () => {
+        logger.info(`Server is running on port ${port}`);
+      });
+    }
 
   } catch (error) {
     logger.error('Failed to start server:', error);
-    process.exit(1);
+    if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      process.exit(1);
+    }
   }
 }
 
-startServer(); 
+// Only start server if not in Lambda environment
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  startServer();
+} 
