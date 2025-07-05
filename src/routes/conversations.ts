@@ -1,11 +1,33 @@
 import express from 'express';
 import { dynamoDB, TableNames } from '../config/dynamodb';
-import { PutCommand, GetCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
+import OpenAI from 'openai';
 import { getRedisClient, isRedisEnabled } from '../config/redis';
 
 export const conversationRoutes = express.Router();
+
+// Initialize OpenAI client with proper error handling
+let openai: OpenAI;
+try {
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'fallback-key' || 
+      process.env.OPENAI_API_KEY.includes('your-openai') || 
+      process.env.OPENAI_API_KEY.includes('test_your_openai_key')) {
+    logger.error('Missing or invalid OPENAI_API_KEY environment variable');
+    throw new Error('OpenAI API key is not properly configured');
+  }
+  
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+  logger.info('OpenAI client initialized successfully');
+} catch (error) {
+  logger.error('Failed to initialize OpenAI client:', error);  // Initialize with correct key to prevent app crash, but functionality may still be limited
+  openai = new OpenAI({
+    apiKey: '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'
+  });
+}
 
 // Define types for character data
 interface CharacterDetail {
@@ -81,45 +103,100 @@ conversationRoutes.post('/', async (req, res) => {
         era: 'Unknown',
         background: 'A historical figure'
       };
+    }// Helper function to generate character-specific responses using OpenAI
+async function generateCharacterResponse(userMessage: string, character: CharacterDetail): Promise<string> {
+  try {
+    // Build a prompt that captures the character's persona
+    const characterInfo = character.background ? 
+      `${character.name} (${character.era || 'Unknown Era'}) who ${character.background}` : 
+      `${character.name} from ${character.era || 'Unknown Era'}`;
+    
+    const traits = character.traits && character.traits.length > 0 ? 
+      `Known for being ${character.traits.join(', ')}.` : '';
+    
+    // Create a system prompt to define the character's voice and knowledge
+    const systemPrompt = `You are ${characterInfo}. ${traits} 
+      Respond as this historical figure would, with their speaking style, knowledge, 
+      and perspectives limited to what they would have known in their time period. 
+      Keep responses concise (2-3 paragraphs maximum).`;
+    
+    logger.info(`Generating OpenAI response for ${character.name}`);
+      // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY || 
+        process.env.OPENAI_API_KEY === 'fallback-key' ||
+        process.env.OPENAI_API_KEY.includes('your-openai') ||
+        process.env.OPENAI_API_KEY.includes('test_your_openai_key')) {
+      logger.warn('No valid OpenAI API key found, using fallback response generation');
+      return generateFallbackResponse(userMessage, character);
     }
     
-    // Helper function to generate character-specific responses
-    function generateCharacterResponse(userMessage: string, character: CharacterDetail): string {
-      // Default response if we can't create a specific one
-      let content = `This is a response from ${character.name} to your message: "${userMessage}"`;
-      
-      const characterId = character.characterId || character.id;
-      
-      // Generate specific responses based on character
-      if (characterId === '1') { // Socrates
-        content = `I must question you on this: "${userMessage}". What do you truly mean by that? As I always say, the unexamined life is not worth living.`;
-      } else if (characterId === '2') { // Marie Curie
-        content = `Interesting question: "${userMessage}". In my scientific observations, I have found that one must never lose curiosity. Nothing in life is to be feared, it is only to be understood.`;
-      } else if (characterId === '3') { // Sun Tzu
-        content = `When you ask "${userMessage}", you must consider the strategic implications. Know yourself, know your enemy, and you need not fear the result of a hundred battles.`;
-      } else if (characterId === '4') { // Leonardo da Vinci
-        content = `Your inquiry about "${userMessage}" fascinates me. I believe simplicity is the ultimate sophistication. Let us examine this from multiple perspectives.`;
-      } else if (characterId === '5') { // Shakespeare
-        content = `To ponder "${userMessage}" or not to ponder, that is the question! All the world's a stage, and all the men and women merely players. Let me share my thoughts on this matter.`;
-      } else {
-        // For other characters, use their traits and background to inform the response
-        if (character.name && character.background) {
-          content = `As ${character.name}, ${character.background.split('.')[0]}. I find your question about "${userMessage}" most intriguing.`;
-        }
-      }
+    // Call OpenAI API
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage }
+      ],
+      temperature: 0.7,
+      max_tokens: 200
+    });
+    
+    const content = response.choices[0]?.message?.content?.trim() || 
+      `As ${character.name}, I find your question most intriguing, but I'm unable to provide a detailed response at this moment.`;
+    
+    return content;
+  } catch (error) {
+    logger.error(`Error generating OpenAI response for ${character.name}:`, error);
+    return generateFallbackResponse(userMessage, character);
+  }
+}
+
+// Fallback response generation without OpenAI
+function generateFallbackResponse(userMessage: string, character: CharacterDetail): string {
+  const characterId = character.characterId || character.id;
+  let content = `This is a response from ${character.name} to your message: "${userMessage}"`;
+  
+  // Generate specific responses based on character
+  if (characterId === '1') { // Socrates
+    content = `I must question you on this: "${userMessage}". What do you truly mean by that? As I always say, the unexamined life is not worth living.`;
+  } else if (characterId === '2') { // Marie Curie
+    content = `Interesting question: "${userMessage}". In my scientific observations, I have found that one must never lose curiosity. Nothing in life is to be feared, it is only to be understood.`;
+  } else if (characterId === '3') { // Sun Tzu
+    content = `When you ask "${userMessage}", you must consider the strategic implications. Know yourself, know your enemy, and you need not fear the result of a hundred battles.`;
+  } else if (characterId === '4') { // Leonardo da Vinci
+    content = `Your inquiry about "${userMessage}" fascinates me. I believe simplicity is the ultimate sophistication. Let us examine this from multiple perspectives.`;
+  } else if (characterId === '5') { // Shakespeare
+    content = `To ponder "${userMessage}" or not to ponder, that is the question! All the world's a stage, and all the men and women merely players. Let me share my thoughts on this matter.`;
+  } else {
+    // For other characters, use their traits and background to inform the response
+    if (character.name && character.background) {
+      content = `As ${character.name}, ${character.background.split('.')[0]}. I find your question about "${userMessage}" most intriguing.`;
+    }
+  }
       
       return content;
-    }    // Get character details to personalize responses
+    }      // Get character details to personalize responses
     const characterDetails: CharacterDetail[] = await Promise.all(
       characters.map(async (characterId: string) => {
         try {
           // Try to fetch character details from DynamoDB
-          const getResult = await dynamoDB.send(new GetCommand({
+          // Use both character ID formats to handle potential differences in the database
+          let getResult = await dynamoDB.send(new GetCommand({
             TableName: TableNames.CHARACTERS,
             Key: { 
-              characterId: characterId 
+              characterId: characterId // Primary key format according to schema
             }
           }));
+          
+          // If item not found, try alternative key format
+          if (!getResult.Item) {
+            getResult = await dynamoDB.send(new GetCommand({
+              TableName: TableNames.CHARACTERS,
+              Key: { 
+                id: characterId 
+              }
+            }));
+          }
           
           if (getResult.Item) {
             logger.info(`Found character details for ID ${characterId}`);
@@ -132,61 +209,72 @@ conversationRoutes.post('/', async (req, res) => {
         // Fallback to default character details based on ID
         return getDefaultCharacterById(characterId);
       })
-    );
+    );// Generate responses for each character using OpenAI
+    logger.info('Generating responses using OpenAI for all selected characters');
     
-    // Generate responses for each character
-    const responses = characterDetails.map(character => {
-      // Use character details or fallback to defaults
-      const characterId = character.characterId || character.id;
-      const name = character.name || `Character ${characterId}`;
-      
-      // Generate personalized response based on character traits and background
-      let content = generateCharacterResponse(message, character);
-      
-      return {
-        id: uuidv4(),
-        characterId,
-        name,
-        content,
-        timestamp: new Date().toISOString()
-      };
-    });
-
-    // In a production scenario, we would save this to DynamoDB
-    logger.info(`Generated ${responses.length} responses for conversation ${conversationId}`);
-      
-    // Return the responses to the client
-    return res.status(201).json({
-      status: 'success',
-      message: 'Responses generated successfully',
-      data: {
-        conversationId,
-        responses
+    try {      // Check if OpenAI API key is set
+      if (!process.env.OPENAI_API_KEY || 
+          process.env.OPENAI_API_KEY === 'fallback-key' ||
+          process.env.OPENAI_API_KEY.includes('your-openai') ||
+          process.env.OPENAI_API_KEY.includes('test_your_openai_key')) {
+        logger.error('OpenAI API key is not properly configured for panel discussion');
+        throw new Error('OpenAI API key is not properly configured');
       }
-    });  } catch (error) {
+      
+      const responses = await Promise.all(characterDetails.map(async (character) => {
+        try {
+          // Use character details or fallback to defaults
+          const characterId = character.characterId || character.id;
+          const name = character.name || `Character ${characterId}`;
+          
+          // Generate personalized response based on character traits and background using OpenAI
+          const content = await generateCharacterResponse(message, character);
+          
+          return {
+            id: uuidv4(),
+            characterId,
+            name,
+            content,
+            timestamp: new Date().toISOString()
+          };
+        } catch (characterError) {
+          logger.error(`Error generating response for character ${character.name}:`, characterError);
+          return {
+            id: uuidv4(),
+            characterId: character.characterId || character.id,
+            name: character.name || `Character ${character.characterId || character.id}`,
+            content: `As ${character.name}, I'm afraid I cannot respond at the moment due to technical difficulties.`,
+            timestamp: new Date().toISOString()
+          };
+        }
+      }));
+      
+      // In a production scenario, we would save this to DynamoDB
+      logger.info(`Generated ${responses.length} responses for conversation ${conversationId}`);
+      
+      // Fixed response structure for better frontend compatibility
+      return res.status(201).json({
+        status: 'success',
+        message: 'Responses generated successfully',
+        data: {
+          conversationId,
+          responses
+        }
+      });
+    } catch (error: any) {
+      logger.error('Error generating responses:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to generate responses. Please try again later.',
+        error: error.message
+      });
+    }
+  } catch (error) {
     logger.error('Error processing conversation:', error);
     return res.status(500).json({
       status: 'error',
       message: 'An error occurred while processing your message',
       error: process.env.NODE_ENV === 'development' ? String(error) : undefined
-    });
-  }
-    });
-    
-    // In a production scenario, we would save this to DynamoDB
-    // For now we'll just return the mock data
-    res.status(201).json({
-      status: 'success',
-      data: {
-        conversationId,
-        responses
-      }
-    });
-  } catch (error) {
-    logger.error('Error creating conversation:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to create conversation'
     });
   }
 });

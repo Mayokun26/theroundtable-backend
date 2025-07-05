@@ -53,24 +53,24 @@ characterRoutes.get('/', async (req, res) => {
       if (isRedisEnabled() && redisClient) {
         await redisClient.set(cacheKey, JSON.stringify(response), 'EX', 300);
       }
-      
-      return res.status(200).json(response);    } catch (dbError) {
+        return res.status(200).json(response);
+    } catch (dbError) {
       logger.error('DynamoDB error:', dbError);
-      
-      // Enhanced fallback data with more characters
+        // Enhanced fallback data with more characters
       logger.info('Falling back to mock character data');
       const mockCharacters = [
         { 
-          id: '1', 
+          id: '1',
+          characterId: '1', // Adding both id formats for consistency
           name: 'Socrates',
           era: 'Ancient Greece',
           category: 'Philosopher',
           description: 'Classical Greek philosopher credited as one of the founders of Western philosophy.',
           traits: ['Wisdom', 'Ethics', 'Logic'],
           imageUrl: '/images/socrates.jpg'
-        },
-        { 
-          id: '2', 
+        },        { 
+          id: '2',
+          characterId: '2', 
           name: 'Marie Curie',
           era: 'Modern Era',
           category: 'Scientist',
@@ -79,7 +79,8 @@ characterRoutes.get('/', async (req, res) => {
           imageUrl: '/images/marie-curie.jpg'
         },
         { 
-          id: '3', 
+          id: '3',
+          characterId: '3', 
           name: 'Sun Tzu',
           era: 'Ancient China',
           category: 'Military Strategist',
@@ -88,7 +89,8 @@ characterRoutes.get('/', async (req, res) => {
           imageUrl: '/images/sun-tzu.jpg'
         },
         { 
-          id: '4', 
+          id: '4',
+          characterId: '4', 
           name: 'Leonardo da Vinci',
           era: 'Renaissance',
           category: 'Polymath',
@@ -113,8 +115,7 @@ characterRoutes.get('/', async (req, res) => {
           description: 'English mathematician and writer, known for her work on Charles Babbage\'s early mechanical computer.',
           traits: ['Analytical', 'Visionary', 'Pioneer'],
           imageUrl: '/images/lovelace.jpg'
-        },
-        { 
+        },        { 
           id: '7', 
           name: 'Nikola Tesla',
           era: 'Modern Era',
@@ -150,54 +151,59 @@ characterRoutes.get('/', async (req, res) => {
           traits: ['Observant', 'Witty', 'Insightful'],
           imageUrl: '/images/austen.jpg'
         },
-          imageUrl: '/images/socrates.jpg'
-        },
         { 
-          id: '2', 
-          name: 'Marie Curie',
+          id: '11', 
+          name: 'Mahatma Gandhi',
           era: 'Modern Era',
-          category: 'Scientist',
-          description: 'Physicist and chemist who conducted pioneering research on radioactivity.',
-          traits: ['Scientific', 'Dedicated', 'Pioneering'],
-          imageUrl: '/images/marie-curie.jpg' 
+          category: 'Political Leader',
+          description: 'Indian lawyer, anti-colonial nationalist and political ethicist who employed nonviolent resistance to lead India to independence.',
+          traits: ['Peaceful', 'Principled', 'Determined'],
+          imageUrl: '/images/gandhi.jpg'
         },
         { 
-          id: '3', 
-          name: 'Sun Tzu',
+          id: '12', 
+          name: 'Maya Angelou',
+          era: 'Modern Era',
+          category: 'Poet',
+          description: 'American poet, memoirist, and civil rights activist best known for her autobiographical book "I Know Why the Caged Bird Sings."',
+          traits: ['Resilient', 'Inspiring', 'Creative'],
+          imageUrl: '/images/angelou.jpg'
+        },
+        { 
+          id: '13', 
+          name: 'Confucius',
           era: 'Ancient China',
-          category: 'Military Strategist',
-          description: 'Chinese general, military strategist, writer, and philosopher known for "The Art of War".',
-          traits: ['Strategic', 'Disciplined', 'Philosophical'],
-          imageUrl: '/images/sun-tzu.jpg'
+          category: 'Philosopher',
+          description: 'Chinese philosopher and politician considered the paragon of Chinese sages and a major influence on Eastern thought.',
+          traits: ['Wise', 'Ethical', 'Scholarly'],
+          imageUrl: '/images/confucius.jpg'
         },
         { 
-          id: '4', 
-          name: 'Leonardo da Vinci',
-          era: 'Renaissance',
-          category: 'Polymath',
-          description: 'Italian polymath of the Renaissance who is known for his works in art, science, and engineering.',
-          traits: ['Creative', 'Inventive', 'Curious'],
-          imageUrl: '/images/leonardo-da-vinci.jpg'
-        },
-        { 
-          id: '5', 
-          name: 'Cleopatra',
-          era: 'Ancient Egypt',
-          category: 'Queen',
-          description: 'The last active ruler of the Ptolemaic Kingdom of Egypt, known for her intelligence and political acumen.',
-          traits: ['Intelligent', 'Political', 'Charismatic'],
-          imageUrl: '/images/cleopatra.jpg'
-        },
-        { 
-          id: '6', 
-          name: 'Genghis Khan',
-          era: 'Mongol Empire',
-          category: 'Emperor',
-          description: 'Founder of the Mongol Empire, which became the largest contiguous empire in history after his death.',
-          traits: ['Brave', 'Strategic', 'Ruthless'],
-          imageUrl: '/images/genghis-khan.jpg'
+          id: '14', 
+          name: 'Frida Kahlo',
+          era: 'Modern Era',
+          category: 'Artist',
+          description: 'Mexican painter known for her many portraits, self-portraits, and works inspired by nature and artifacts of Mexico.',
+          traits: ['Passionate', 'Resilient', 'Expressive'],
+          imageUrl: '/images/kahlo.jpg'
         }
-      ];
+      ];      // Generate additional characters to reach 50
+      for (let i = 15; i <= 50; i++) {
+        const eras = ['Ancient Greece', 'Roman Empire', 'Renaissance', 'Medieval Period', 'Industrial Revolution', 'Modern Era', 'Victorian Era', 'Enlightenment'];
+        const categories = ['Philosopher', 'Scientist', 'Artist', 'Military Leader', 'Writer', 'Ruler', 'Inventor', 'Explorer'];
+        const idStr = i.toString();
+        
+        mockCharacters.push({
+          id: idStr,
+          characterId: idStr, // Adding both id formats for consistency
+          name: `Historical Figure ${i}`,
+          era: eras[Math.floor(Math.random() * eras.length)],
+          category: categories[Math.floor(Math.random() * categories.length)],
+          description: `A notable historical figure known for their contributions to ${categories[Math.floor(Math.random() * categories.length)].toLowerCase()}.`,
+          traits: ['Notable', 'Historical', 'Influential'],
+          imageUrl: `/images/figure${i}.jpg`
+        });
+      }
       
       return res.status(200).json({
         status: 'success',
