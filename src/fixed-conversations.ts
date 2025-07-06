@@ -1,8 +1,8 @@
 import express from 'express';
-import { dynamoDB, TableNames } from '../config/dynamodb';
+import { dynamoDB, TableNames } from './config/dynamodb';
 import { PutCommand, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '../utils/logger';
+import { logger } from './utils/logger';
 import OpenAI from 'openai';
 
 export const conversationRoutes = express.Router();
