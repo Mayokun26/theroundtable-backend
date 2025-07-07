@@ -74,15 +74,50 @@ async function testConnections() {
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ OpenAI API key is missing');
     } else {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const apiKey = process.env.OPENAI_API_KEY;
+      console.log(`ℹ️ Found OpenAI API key starting with: ${apiKey.substring(0, 5)}...`);
       
-      // Just check if we can initialize the client
-      console.log('✅ OpenAI API client initialized');
-      // We won't make an actual API call to avoid consuming tokens
-      console.log('ℹ️ Skipping actual OpenAI API call to avoid token usage');
+      if (apiKey.includes('your-openai') || apiKey.startsWith('test_') || apiKey === 'fallback-key') {
+        console.error('❌ OpenAI API key appears to be a placeholder value');
+      } else {
+        const openai = new OpenAI({ 
+          apiKey: apiKey,
+          timeout: 10000 // 10 second timeout for this test
+        });
+        
+        console.log('✅ OpenAI API client initialized');
+        
+        // Make a minimal API call with retry logic
+        console.log('🔄 Making a test API call to OpenAI...');
+        try {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              { role: "user", content: "Say hello for a connection test (1-5 words only)" }
+            ],
+            max_tokens: 10
+          });
+          
+          if (completion.choices && completion.choices[0]) {
+            console.log('✅ OpenAI API call successful!');
+            console.log(`📋 Response: "${completion.choices[0].message.content}"`);
+          } else {
+            console.error('❌ OpenAI API call returned empty or invalid response');
+          }
+        } catch (apiError: any) {
+          console.error(`❌ OpenAI API call failed: ${apiError.message}`);
+          
+          if (apiError.status === 401) {
+            console.error('❌ Authentication error - API key is likely invalid');
+          } else if (apiError.status === 429) {
+            console.error('❌ Rate limit or quota exceeded');
+          }
+        }
+      }
     }
-  } catch (err) {
-    console.error('❌ OpenAI API client initialization failed:', err);
+  } catch (err: any) {
+    console.error('❌ OpenAI API client initialization failed:', err.message || err);
   }
 
   console.log('\n✨ Connection tests completed\n');

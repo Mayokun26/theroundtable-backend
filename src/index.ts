@@ -1,11 +1,32 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { createServer } from './server';
 import { logger } from './utils/logger';
 import { createRedisClient, isRedisEnabled } from './config/redis';
 import { checkDynamoDBConnection } from './config/dynamodb';
 
-// Load environment variables first
-dotenv.config();
+// Load environment variables first with enhanced error handling
+const envPath = path.resolve(__dirname, '../.env');
+try {
+  if (fs.existsSync(envPath)) {
+    const result = dotenv.config({ path: envPath });
+    if (result.error) {
+      console.error('Error loading .env file:', result.error);
+    } else {
+      console.log('Environment variables loaded successfully from:', envPath);
+    }
+  } else {
+    console.warn('.env file not found at path:', envPath);
+  }
+} catch (error) {
+  console.error('Error checking for .env file:', error);
+}
+
+// Validate critical environment variables
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('WARNING: OPENAI_API_KEY is not set in environment variables');
+}
 
 const port = process.env.PORT || 3001;
 
