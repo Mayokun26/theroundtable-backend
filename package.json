@@ -1,0 +1,26 @@
+{
+  "name": "theroundtable",
+  "version": "1.0.0",
+  "description": "TheRoundTable - AI-powered historical and fictional character conversation platform",
+  "scripts": {
+    "build": "cd theroundtable-backend && npm run build",
+    "build:backend": "cd theroundtable-backend && npm run build",
+    "build:frontend": "cd theroundtable-frontend && npm run build",
+    "deploy": "powershell -File ./build-deploy.ps1 -build -deploy",
+    "deploy:lambda": "powershell -File ./build-deploy.ps1 -deploy",
+    "update:lambda": "powershell -File ./update-lambda-env.ps1 -Force",
+    "verify:config": "powershell -File ./verify-configuration.ps1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudfront": "^3.828.0",
+    "@aws-sdk/client-dynamodb": "^3.828.0",
+    "@aws-sdk/client-lambda": "^3.828.0",
+    "@aws-sdk/client-s3": "^3.828.0",
+    "@aws-sdk/client-sts": "^3.817.0",
+    "@aws-sdk/credential-providers": "^3.817.0",
+    "@aws-sdk/lib-dynamodb": "^3.828.0",
+    "aws-sdk": "^2.1692.0",
+    "dotenv": "^16.5.0",
+    "uuid": "^11.1.0"
+  }
+}

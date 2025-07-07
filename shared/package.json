@@ -1,0 +1,9 @@
+{
+  "name": "theroundtable-shared",
+  "version": "1.0.0",
+  "description": "Shared modules for TheRoundTable application",
+  "main": "index.js",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  }
+}
