@@ -1,41 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, Grid, Card, CardMedia, CardContent, Typography, Container, Chip, CircularProgress } from '@mui/material';
 
 interface Character {
   id: string;
   name: string;
-  category: string;
-  era: string;
-  description: string;
-  traits: string[];
-  imageUrl: string;
+  category?: string;
+  era?: string;
+  description?: string;
+  traits?: string[];
+  imageUrl?: string;
 }
 
-const CharacterGrid: React.FC = () => {
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [loading, setLoading] = useState(true);
+interface CharacterGridProps {
+  characters?: Character[];
+}
+
+const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchCharacters = async () => {
-      try {
-        const response = await fetch('/api/characters');
-        if (!response.ok) {
-          throw new Error('Failed to fetch characters');
-        }
-        // The API returns an array directly, not an object with a characters property
-        const data = await response.json();
-        setCharacters(Array.isArray(data) ? data : []);
-        setLoading(false);
-      } catch (err) {
-        setError('Error loading characters. Please try again later.');
-        setLoading(false);
-        console.error('Error fetching characters:', err);
-      }
-    };
-
-    fetchCharacters();
-  }, []);
+  
+  // Default characters if none provided
+  const defaultCharacters: Character[] = [
+    {
+      id: '1',
+      name: 'Socrates',
+      category: 'Philosopher',
+      era: 'Ancient Greece',
+      description: 'Classical Greek philosopher credited as one of the founders of Western philosophy.',
+      traits: ['Wisdom', 'Ethics', 'Logic'],
+      imageUrl: '/images/characters/socrates.jpg'
+    },
+    {
+      id: '2',
+      name: 'Marie Curie',
+      category: 'Scientist',
+      era: 'Modern Era',
+      description: 'Physicist and chemist who conducted pioneering research on radioactivity.',
+      traits: ['Scientific', 'Dedicated', 'Pioneering'],
+      imageUrl: '/images/characters/marie-curie.jpg'
+    },
+    {
+      id: '3',
+      name: 'Sun Tzu',
+      category: 'Military Strategist',
+      era: 'Ancient China',
+      description: 'Chinese general, military strategist, writer, and philosopher known for "The Art of War".',
+      traits: ['Strategic', 'Disciplined', 'Philosophical'],
+      imageUrl: '/images/characters/sun-tzu.jpg'
+    }
+  ];
 
   if (loading) {
     return (
@@ -53,17 +66,11 @@ const CharacterGrid: React.FC = () => {
     );
   }
 
-  // If there are no characters and no error, show a message instead of throwing an error
-  if (!characters || characters.length === 0) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography variant="h6">No characters found. Please try again later.</Typography>
-      </Box>
-    );
-  }
-
-  // Limit to exactly 3 characters
-  const displayedCharacters = characters.slice(0, 3);
+  // Use default characters if none provided
+  const charactersToUse = characters && characters.length > 0 ? characters : defaultCharacters;
+  
+  // Always limit to exactly 3 characters
+  const displayedCharacters = charactersToUse.slice(0, 3);
 
   return (
     <Container maxWidth="xl">

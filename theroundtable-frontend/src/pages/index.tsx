@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import Link from 'next/link';
 import Head from 'next/head';
+import { 
+  Box, 
+  Button, 
+  Typography, 
+  Container, 
+  CircularProgress 
+} from '@mui/material';
 import CharacterGrid from '../components/CharacterGrid';
 
 export default function Home() {
@@ -42,33 +48,43 @@ export default function Home() {
         <meta name="description" content="Engage in thought-provoking conversations with historical figures powered by AI" />
       </Head>
       
-      <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>The Round Table</h1>
-        <p style={{ fontSize: '1.1rem', color: '#555', marginBottom: '2rem' }}>
-          Welcome to The Round Table, a platform for engaging discussions with historical figures.
-        </p>
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Box textAlign="center" mb={6}>
+          <Typography variant="h2" component="h1" gutterBottom>
+            The Round Table
+          </Typography>
+          <Typography variant="h5" color="text.secondary" paragraph>
+            Welcome to The Round Table, a platform for engaging discussions with historical figures.
+          </Typography>
+          <Box mt={4}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              size="large" 
+              onClick={handleStartConversation}
+              sx={{ 
+                bgcolor: '#8B4513', 
+                '&:hover': { bgcolor: '#6b3311' } 
+              }}
+            >
+              Start a Conversation
+            </Button>
+          </Box>
+        </Box>
         
-        <div style={{ marginTop: '20px', marginBottom: '40px' }}>
-          <button 
-            onClick={handleStartConversation}
-            style={{
-              padding: '12px 24px',
-              background: '#8B4513',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 'bold'
-            }}
-          >
-            Start a Conversation
-          </button>
-        </div>
-        
-        <h2 style={{ marginTop: '40px', marginBottom: '20px' }}>Available Historical Figures</h2>
-        <CharacterGrid characters={characters} />
-      </div>
+        {loading ? (
+          <Box display="flex" justifyContent="center" my={8}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <Typography variant="h4" component="h2" gutterBottom textAlign="center">
+              Available Historical Figures
+            </Typography>
+            <CharacterGrid characters={characters} />
+          </>
+        )}
+      </Container>
     </>
   );
 } 
