@@ -1,6 +1,6 @@
 import winston from 'winston';
 
-// Create a winston logger suitable for Lambda environment
+// Create a winston logger
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
@@ -9,12 +9,20 @@ export const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'theroundtable-backend' },
   transports: [
-    // Console transport for all environments (Lambda uses CloudWatch for console logs)
+    // Console transport for development
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
         winston.format.simple()
       )
+    }),
+    // File transport for production
+    new winston.transports.File({ 
+      filename: 'logs/error.log', 
+      level: 'error' 
+    }),
+    new winston.transports.File({ 
+      filename: 'logs/combined.log' 
     })
   ]
 }); 
