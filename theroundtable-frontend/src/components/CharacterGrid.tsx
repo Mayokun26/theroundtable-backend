@@ -62,19 +62,22 @@ const CharacterGrid: React.FC = () => {
     );
   }
 
+  // Limit to exactly 3 characters
+  const displayedCharacters = characters.slice(0, 3);
+
   return (
     <Container maxWidth="xl">
       <Box my={4}>
         <Typography variant="h4" component="h1" gutterBottom align="center">
-          The Round Table: 50 Historical and Legendary Panelists
+          The Round Table: Historical Figures
         </Typography>
         <Typography variant="subtitle1" gutterBottom align="center" color="textSecondary" mb={6}>
-          Engage with history's greatest minds, legendary heroes, and fictional characters
+          Engage with history's greatest minds
         </Typography>
         
         <Grid container spacing={3}>
-          {characters.map((character) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={character.id}>
+          {displayedCharacters.map((character) => (
+            <Grid item xs={12} sm={6} md={4} key={character.id}>
               <Card sx={{ 
                 height: '100%', 
                 display: 'flex', 
