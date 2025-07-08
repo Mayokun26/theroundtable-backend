@@ -1,9 +1,7 @@
-// filepath: c:\Users\Oreko\work\TheRoundTable\theroundtable-backend\src\test-connections.ts
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import Redis from 'ioredis';
 import { OpenAI } from 'openai';
-import { ListTablesCommand, DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { logger } from './utils/logger';
 
 dotenv.config();
 
@@ -12,11 +10,10 @@ async function testConnections() {
   
   // Check required environment variables
   const requiredVars = [
-    'AWS_REGION', 
-    'DYNAMODB_TABLE_PREFIX',
-    'REDIS_HOST',
-    'REDIS_PORT',
-    'OPENAI_API_KEY'
+    'MONGODB_URI',
+    'REDIS_URL',
+    'OPENAI_API_KEY',
+    'CLERK_SECRET_KEY'
   ];
 
   for (const varName of requiredVars) {
@@ -27,106 +24,46 @@ async function testConnections() {
     }
   }
 
-  console.log('\n🔍 Testing DynamoDB Connection:\n');
+  console.log('\n🔍 Testing MongoDB Connection:\n');
   try {
-    const client = new DynamoDBClient({
-      region: process.env.AWS_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-      },
-      ...(process.env.DYNAMODB_ENDPOINT ? { endpoint: process.env.DYNAMODB_ENDPOINT } : {})
-    });
-
-    const command = new ListTablesCommand({});
-    const result = await client.send(command);
-    console.log('✅ DynamoDB connected successfully');
-    console.log('📋 Tables in DynamoDB:', result.TableNames);
-  } catch (err) {
-    console.error('❌ DynamoDB connection failed:', err);
+    await mongoose.connect(process.env.MONGODB_URI as string);
+    console.log('✅ MongoDB connected successfully');
+    await mongoose.disconnect();
+    console.log('✅ MongoDB disconnected cleanly');
+  } catch (error: any) {
+    console.error('❌ MongoDB connection failed:', error?.message || 'Unknown error');
   }
 
   console.log('\n🔍 Testing Redis Connection:\n');
   try {
-    const redisOptions = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      ...(process.env.REDIS_PASSWORD ? { password: process.env.REDIS_PASSWORD } : {})
-    };
-
-    const redis = new Redis(redisOptions);
-    
+    const redis = new Redis(process.env.REDIS_URL as string);
     await redis.ping();
     console.log('✅ Redis connected successfully');
-    
-    // Test set and get
-    await redis.set('test-key', 'test-value');
-    const value = await redis.get('test-key');
-    console.log('📋 Redis test value:', value);
-    
     await redis.quit();
-  } catch (err) {
-    console.error('❌ Redis connection failed:', err);
+    console.log('✅ Redis disconnected cleanly');
+  } catch (error: any) {
+    console.error('❌ Redis connection failed:', error?.message || 'Unknown error');
   }
 
-  console.log('\n🔍 Testing OpenAI API Connection:\n');
+  console.log('\n🔍 Testing OpenAI Configuration:\n');
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('❌ OpenAI API key is missing');
-    } else {
-      const apiKey = process.env.OPENAI_API_KEY;
-      console.log(`ℹ️ Found OpenAI API key starting with: ${apiKey.substring(0, 5)}...`);
-      
-      if (apiKey.includes('your-openai') || apiKey.startsWith('test_') || apiKey === 'fallback-key') {
-        console.error('❌ OpenAI API key appears to be a placeholder value');
-      } else {
-        const openai = new OpenAI({ 
-          apiKey: apiKey,
-          timeout: 10000 // 10 second timeout for this test
-        });
-        
-        console.log('✅ OpenAI API client initialized');
-        
-        // Make a minimal API call with retry logic
-        console.log('🔄 Making a test API call to OpenAI...');
-        try {
-          const completion = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-              { role: "system", content: "You are a helpful assistant." },
-              { role: "user", content: "Say hello for a connection test (1-5 words only)" }
-            ],
-            max_tokens: 10
-          });
-          
-          if (completion.choices && completion.choices[0]) {
-            console.log('✅ OpenAI API call successful!');
-            console.log(`📋 Response: "${completion.choices[0].message.content}"`);
-          } else {
-            console.error('❌ OpenAI API call returned empty or invalid response');
-          }
-        } catch (apiError: any) {
-          console.error(`❌ OpenAI API call failed: ${apiError.message}`);
-          
-          if (apiError.status === 401) {
-            console.error('❌ Authentication error - API key is likely invalid');
-          } else if (apiError.status === 429) {
-            console.error('❌ Rate limit or quota exceeded');
-          }
-        }
-      }
-    }
-  } catch (err: any) {
-    console.error('❌ OpenAI API client initialization failed:', err.message || err);
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+    const models = await openai.models.list();
+    console.log('✅ OpenAI API key is valid');
+  } catch (error: any) {
+    console.error('❌ OpenAI API key validation failed:', error?.message || 'Unknown error');
   }
 
-  console.log('\n✨ Connection tests completed\n');
+  console.log('\n🔍 Testing Clerk Configuration:\n');
+  if (process.env.CLERK_SECRET_KEY?.startsWith('sk_test_')) {
+    console.log('✅ Clerk secret key format is valid');
+  } else {
+    console.error('❌ Clerk secret key format is invalid');
+  }
 }
 
-// Run the tests
-testConnections()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error('Tests failed with error:', err);
-    process.exit(1);
-  });
+testConnections().catch((error: any) => {
+  console.error('Test script failed:', error?.message || 'Unknown error');
+}); 
