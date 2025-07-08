@@ -9,40 +9,19 @@ const { AWS_CONFIG, OPENAI_CONFIG, LLM_PRIORITY } = require("../config/aws-confi
 // Initialize OpenAI client
 let openai;
 try {
-  // In development mode, make OpenAI optional
-  if (process.env.NODE_ENV === 'development' && !process.env.OPENAI_API_KEY) {
-    console.log("Running in development mode without OpenAI API key - AI responses will be mocked");
-    openai = null;
-  } else {
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-    console.log("OpenAI client initialized successfully");
-  }
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+  console.log("OpenAI client initialized successfully");
 } catch (error) {
   console.warn("Failed to initialize OpenAI client:", error.message);
   openai = null;
 }
 
 /**
- * Generate a mock response for development mode
- */
-async function generateMockResponse(character, message) {
-  console.log(`Generating MOCK response for ${character.name} in development mode...`);
-  return {
-    content: `[DEVELOPMENT MODE] I am ${character.name}. This is a mock response for development purposes. In production, this would be a response from OpenAI based on the character's background and the message: "${message}"`
-  };
-}
-
-/**
  * Generate a response using OpenAI API (GPT-3.5/4)
  */
 async function generateOpenAIResponse(character, message, previousResponses = []) {
-  // If in development mode and no OpenAI API key, use mock response
-  if (process.env.NODE_ENV === 'development' && !openai) {
-    return generateMockResponse(character, message);
-  }
-
   try {
     console.log(`Generating response for ${character.name} using OpenAI...`);
     

@@ -5,25 +5,14 @@ let redisClient: Redis | null = null;
 let redisEnabled = true;
 
 export async function createRedisClient() {
-  // Check if Redis is explicitly disabled
-  if (process.env.REDIS_ENABLED === 'false') {
-    logger.info('Redis functionality is disabled via configuration');
+  if (!process.env.REDIS_URL) {
+    logger.warn('Redis URL is not defined, Redis functionality will be disabled');
     redisEnabled = false;
     return null;
   }
 
-  // Construct Redis URL from individual components or use REDIS_URL directly
-  const redisUrl = process.env.REDIS_URL || (() => {
-    const host = process.env.REDIS_HOST || 'localhost';
-    const port = process.env.REDIS_PORT || '6379';
-    const password = process.env.REDIS_PASSWORD ? `:${encodeURIComponent(process.env.REDIS_PASSWORD)}@` : '';
-    return password ? `redis://${password}${host}:${port}` : `redis://${host}:${port}`;
-  })();
-
   try {
-    logger.info(`Connecting to Redis at ${redisUrl.replace(/(:.*?@)/, ':***@')}`);
-    
-    redisClient = new Redis(redisUrl, {
+    redisClient = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: 3,
       connectTimeout: 5000,
       retryStrategy(times) {
