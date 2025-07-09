@@ -1,4 +1,4 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, DescribeTableCommand } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { logger } from '../utils/logger';
 
@@ -21,9 +21,10 @@ export const TableNames = {
 export async function checkDynamoDBConnection(): Promise<boolean> {
   try {
     // Try to describe one of our tables to check connection
-    await client.send({
+    const command = new DescribeTableCommand({
       TableName: TableNames.USERS
     });
+    await client.send(command);
     logger.info('DynamoDB connected successfully');
     return true;
   } catch (error) {

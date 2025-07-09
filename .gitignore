@@ -126,3 +126,7 @@ coverage/
 !.yarn/versions
 .pnp.*
 yarn-error.log
+
+#Claude
+claude-env
+CLAUDE.md

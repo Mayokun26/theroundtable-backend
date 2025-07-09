@@ -1,0 +1,73 @@
+# AWS Provider configuration
+provider "aws" {
+  region = var.aws_region
+}
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  required_version = ">= 1.2.0"
+  
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+}
+
+# Infrastructure modules
+module "dynamodb" {
+  source      = "./modules/dynamodb"
+  environment = var.environment
+  project_name = var.project_name
+}
+
+# Certificate first
+module "acm" {
+  source = "./modules/acm"
+  environment = var.environment
+  project_name = var.project_name
+  domain_name = var.domain_name
+  alternative_names = ["api.${var.domain_name}"]
+}
+
+# Then Lambda and API Gateway
+module "lambda" {
+  source      = "./modules/lambda"
+  environment = var.environment
+  project_name = var.project_name
+}
+
+module "api_gateway" {
+  source = "./modules/api_gateway"
+  environment = var.environment
+  project_name = var.project_name
+  lambda_function_name = module.lambda.function_name
+  lambda_invoke_arn = module.lambda.invoke_arn
+  domain_name = var.domain_name
+  certificate_arn = module.acm.certificate_arn
+}
+
+# Frontend with CloudFront
+module "frontend" {
+  source = "./modules/frontend"
+  environment = var.environment
+  project_name = var.project_name
+  domain_name = var.domain_name
+  certificate_arn = module.acm.certificate_arn
+}
+
+# Finally Route53
+module "route53" {
+  source = "./modules/route53"
+  environment = var.environment
+  project_name = var.project_name
+  domain_name = var.domain_name
+  domain_validation_options = module.acm.domain_validation_options
+  cloudfront_domain_name = module.frontend.cloudfront_domain
+  cloudfront_hosted_zone_id = "Z2FDTNDATAQYW2"  # AWS's fixed CloudFront hosted zone ID
+  api_domain_name = module.api_gateway.api_domain_name
+  api_hosted_zone_id = module.api_gateway.api_hosted_zone_id
+}
