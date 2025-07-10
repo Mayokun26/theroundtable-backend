@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(git config:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run type-check:*)",
+      "Bash(./scripts/deploy.ps1 -Backend)",
+      "Bash(npm run deploy:*)",
+      "Bash(git push:*)",
+      "Bash(git remote get-url:*)",
+      "Bash(timeout 60 npm run type-check)",
+      "Bash(grep:*)",
+      "Bash(./terraform.exe plan)",
+      "Bash(aws:*)",
+      "Bash(ping:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(timeout 120s npm run build)",
+      "Bash(git count-objects:*)",
+      "Bash(git gc:*)",
+      "Bash(exit)"
+    ],
+    "deny": []
+  }
+}

@@ -58,9 +58,6 @@ export default function Home() {
     router.push('/conversation');
   };
   
-  const checkApiConnection = () => {
-    alert('API Connection: ' + (process.env.NEXT_PUBLIC_API_URL || 'Not configured'));
-  };
   
   return (
     <>
