@@ -7,7 +7,8 @@ Write-Host ""
 # Configuration
 $domainName = "theroundtableai.com"
 $env:AWS_REGION = "us-east-1"
-$projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $frontendDir = Join-Path $projectRoot "theroundtable-frontend"
 $backendDir = Join-Path $projectRoot "theroundtable-backend"
 
