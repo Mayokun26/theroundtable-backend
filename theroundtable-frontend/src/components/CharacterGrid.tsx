@@ -2,15 +2,11 @@ import React from 'react';
 import { 
   Grid, 
   Card, 
-  CardMedia, 
   CardContent, 
   Typography, 
   Chip, 
-  Box, 
-  CardActions,
-  Button
+  Box
 } from '@mui/material';
-import { useRouter } from 'next/router';
 
 interface Character {
   id: string;
@@ -20,14 +16,41 @@ interface Character {
   description?: string;
   traits?: string[];
   imageUrl?: string;
+  placeholderColor?: string;
 }
 
 interface CharacterGridProps {
   characters: Character[];
 }
 
+const CharacterPlaceholder: React.FC<{ character: Character }> = ({ character }) => {
+  const initials = character.name.split(' ').map(word => word[0]).join('').toUpperCase();
+  
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        height: 200,
+        backgroundColor: character.placeholderColor || '#95a5a6',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: 'white',
+        fontFamily: 'Arial, sans-serif'
+      }}
+    >
+      <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+        {initials}
+      </Typography>
+      <Typography variant="body2" component="div" sx={{ textAlign: 'center', px: 1 }}>
+        {character.name}
+      </Typography>
+    </Box>
+  );
+};
+
 const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
-  const router = useRouter();
   
   const characterList = React.useMemo(() => {
     if (characters.length === 0) {
@@ -40,7 +63,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient Greece',
           description: 'Classical Greek philosopher credited as the founder of Western philosophy.',
           traits: ['questioning', 'analytical', 'ironic', 'ethical'],
-          imageUrl: '/images/characters/socrates.jpg'
+          imageUrl: '/images/characters/socrates.svg',
+          placeholderColor: '#3498db'
         },
         {
           id: '2',
@@ -49,7 +73,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: '19th-20th Century',
           description: 'Pioneer in research on radioactivity and the first woman to win a Nobel Prize.',
           traits: ['determined', 'focused', 'diligent'],
-          imageUrl: '/images/characters/marie-curie.jpg'
+          imageUrl: '/images/characters/marie-curie.svg',
+          placeholderColor: '#e74c3c'
         },
         {
           id: '3',
@@ -58,7 +83,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient China',
           description: 'Chinese general and military strategist, author of The Art of War.',
           traits: ['strategic', 'disciplined', 'observant', 'pragmatic'],
-          imageUrl: '/images/characters/sun-tzu.jpg'
+          imageUrl: '/images/characters/sun-tzu.svg',
+          placeholderColor: '#f39c12'
         },
         {
           id: '4',
@@ -67,7 +93,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Renaissance',
           description: 'Italian Renaissance polymath whose areas of interest included invention, drawing, painting, sculpture, architecture, science, music, mathematics, engineering, literature, anatomy, geology, astronomy, botany, paleontology, and cartography.',
           traits: ['creative', 'innovative', 'analytical', 'curious'],
-          imageUrl: '/images/characters/leonardo.jpg'
+          imageUrl: '/images/characters/leonardo.svg',
+          placeholderColor: '#9b59b6'
         },
         {
           id: '5',
@@ -76,7 +103,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient Egypt',
           description: 'Last active ruler of the Ptolemaic Kingdom of Egypt, known for her intelligence, political acumen, and romantic relationships with Julius Caesar and Mark Antony.',
           traits: ['strategic', 'charismatic', 'diplomatic', 'ambitious'],
-          imageUrl: '/images/characters/cleopatra.jpg'
+          imageUrl: '/images/characters/cleopatra.svg',
+          placeholderColor: '#1abc9c'
         },
         {
           id: '6',
@@ -85,7 +113,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient China',
           description: 'Chinese philosopher and politician who is widely considered one of the most important and influential individuals in human history.',
           traits: ['wise', 'ethical', 'traditional', 'measured'],
-          imageUrl: '/images/characters/confucius.jpg'
+          imageUrl: '/images/characters/confucius.svg',
+          placeholderColor: '#34495e'
         },
         {
           id: '7',
@@ -94,7 +123,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: '20th Century',
           description: 'Theoretical physicist who developed the theory of relativity, one of the two pillars of modern physics.',
           traits: ['brilliant', 'imaginative', 'persistent', 'independent'],
-          imageUrl: '/images/characters/einstein.jpg'
+          imageUrl: '/images/characters/einstein.svg',
+          placeholderColor: '#2ecc71'
         },
         {
           id: '8',
@@ -103,7 +133,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Elizabethan England',
           description: 'English poet, playwright, and actor, widely regarded as the greatest writer in the English language.',
           traits: ['creative', 'insightful', 'eloquent', 'dramatic'],
-          imageUrl: '/images/characters/shakespeare.jpg'
+          imageUrl: '/images/characters/shakespeare.svg',
+          placeholderColor: '#8e44ad'
         },
         {
           id: '9',
@@ -112,7 +143,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient Rome',
           description: 'Roman general and statesman who played a critical role in the events that led to the demise of the Roman Republic and the rise of the Roman Empire.',
           traits: ['ambitious', 'strategic', 'eloquent', 'bold'],
-          imageUrl: '/images/characters/caesar.jpg'
+          imageUrl: '/images/characters/caesar.svg',
+          placeholderColor: '#c0392b'
         },
         {
           id: '10',
@@ -121,7 +153,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Medieval France',
           description: 'French peasant girl who claimed to have received visions from saints telling her to recover France from English domination.',
           traits: ['courageous', 'determined', 'faithful', 'inspiring'],
-          imageUrl: '/images/characters/joan-of-arc.jpg'
+          imageUrl: '/images/characters/joan-of-arc.svg',
+          placeholderColor: '#16a085'
         },
         {
           id: '11',
@@ -130,7 +163,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: '20th Century',
           description: 'Indian independence leader who championed nonviolent resistance to achieve political and social progress.',
           traits: ['peaceful', 'determined', 'principled', 'inspiring'],
-          imageUrl: '/images/characters/gandhi.jpg'
+          imageUrl: '/images/characters/gandhi.svg',
+          placeholderColor: '#f1c40f'
         },
         {
           id: '12',
@@ -139,7 +173,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient Greece',
           description: 'Greek philosopher and student of Socrates, founder of the Academy and teacher of Aristotle.',
           traits: ['idealistic', 'analytical', 'systematic', 'visionary'],
-          imageUrl: '/images/characters/plato.jpg'
+          imageUrl: '/images/characters/plato.svg',
+          placeholderColor: '#27ae60'
         },
         {
           id: '13',
@@ -148,7 +183,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient Greece',
           description: 'Greek philosopher and student of Plato, tutor to Alexander the Great, and founder of the Lyceum.',
           traits: ['logical', 'systematic', 'empirical', 'comprehensive'],
-          imageUrl: '/images/characters/aristotle.jpg'
+          imageUrl: '/images/characters/aristotle.svg',
+          placeholderColor: '#2980b9'
         },
         {
           id: '14',
@@ -157,7 +193,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: 'Ancient Macedonia',
           description: 'Macedonian king who created one of the largest empires in ancient history, stretching from Greece to Egypt and India.',
           traits: ['ambitious', 'strategic', 'charismatic', 'bold'],
-          imageUrl: '/images/characters/alexander.jpg'
+          imageUrl: '/images/characters/alexander.svg',
+          placeholderColor: '#d35400'
         },
         {
           id: '15',
@@ -166,7 +203,358 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
           era: '18th-19th Century',
           description: 'French military general and emperor who conquered much of Europe in the early 19th century.',
           traits: ['strategic', 'ambitious', 'decisive', 'innovative'],
-          imageUrl: '/images/characters/napoleon.jpg'
+          imageUrl: '/images/characters/napoleon.svg',
+          placeholderColor: '#7f8c8d'
+        },
+        {
+          id: '16',
+          name: 'Marcus Aurelius',
+          category: 'Philosopher & Emperor',
+          era: 'Ancient Rome',
+          description: 'Roman emperor and Stoic philosopher who wrote "Meditations" and ruled during the height of the Roman Empire.',
+          traits: ['philosophical', 'stoic', 'virtuous', 'disciplined'],
+          imageUrl: '/images/characters/marcus-aurelius.svg',
+          placeholderColor: '#8b4513'
+        },
+        {
+          id: '17',
+          name: 'Frederick the Great',
+          category: 'Military Leader & King',
+          era: '18th Century',
+          description: 'King of Prussia who was a military genius, patron of the arts, and enlightened despot.',
+          traits: ['strategic', 'cultured', 'enlightened', 'decisive'],
+          imageUrl: '/images/characters/frederick.svg',
+          placeholderColor: '#4682b4'
+        },
+        {
+          id: '18',
+          name: 'Catherine the Great',
+          category: 'Empress',
+          era: '18th Century',
+          description: 'Empress of Russia who expanded territory, promoted arts and education, and corresponded with Enlightenment philosophers.',
+          traits: ['intelligent', 'cultured', 'reformist', 'ambitious'],
+          imageUrl: '/images/characters/catherine.svg',
+          placeholderColor: '#9932cc'
+        },
+        {
+          id: '19',
+          name: 'Hannibal Barca',
+          category: 'Military Leader',
+          era: 'Ancient Carthage',
+          description: 'Carthaginian general who crossed the Alps with elephants to attack Rome during the Second Punic War.',
+          traits: ['tactical', 'innovative', 'persistent', 'bold'],
+          imageUrl: '/images/characters/hannibal.svg',
+          placeholderColor: '#b22222'
+        },
+        {
+          id: '20',
+          name: 'Saladin',
+          category: 'Military Leader & Sultan',
+          era: 'Medieval Islamic World',
+          description: 'Kurdish Muslim leader who recaptured Jerusalem from the Crusaders and was known for his chivalrous conduct.',
+          traits: ['honorable', 'strategic', 'diplomatic', 'devout'],
+          imageUrl: '/images/characters/saladin.svg',
+          placeholderColor: '#228b22'
+        },
+        {
+          id: '21',
+          name: 'Elizabeth I',
+          category: 'Queen',
+          era: 'Tudor England',
+          description: 'Queen of England who defeated the Spanish Armada and presided over the Elizabethan Golden Age.',
+          traits: ['intelligent', 'determined', 'eloquent', 'independent'],
+          imageUrl: '/images/characters/elizabeth.svg',
+          placeholderColor: '#dc143c'
+        },
+        {
+          id: '22',
+          name: 'King Arthur',
+          category: 'Legendary King',
+          era: 'Medieval Britain',
+          description: 'Legendary British leader who established the Round Table and sought the Holy Grail.',
+          traits: ['noble', 'chivalrous', 'just', 'inspirational'],
+          imageUrl: '/images/characters/arthur.svg',
+          placeholderColor: '#ffd700'
+        },
+        {
+          id: '23',
+          name: 'Lao Tzu',
+          category: 'Philosopher',
+          era: 'Ancient China',
+          description: 'Ancient Chinese philosopher and founder of Taoism who wrote the Tao Te Ching.',
+          traits: ['wise', 'peaceful', 'philosophical', 'simple'],
+          imageUrl: '/images/characters/laotzu.svg',
+          placeholderColor: '#8fbc8f'
+        },
+        {
+          id: '24',
+          name: 'Miyamoto Musashi',
+          category: 'Samurai & Philosopher',
+          era: 'Feudal Japan',
+          description: 'Legendary Japanese swordsman who developed the two-sword fighting style and wrote "The Book of Five Rings".',
+          traits: ['disciplined', 'philosophical', 'skilled', 'strategic'],
+          imageUrl: '/images/characters/musashi.svg',
+          placeholderColor: '#2f4f4f'
+        },
+        {
+          id: '25',
+          name: 'Charlemagne',
+          category: 'Emperor',
+          era: 'Early Medieval Europe',
+          description: 'King of the Franks and Emperor of the Romans who united much of Western Europe.',
+          traits: ['unifying', 'religious', 'educational', 'powerful'],
+          imageUrl: '/images/characters/charlemagne.svg',
+          placeholderColor: '#4169e1'
+        },
+        {
+          id: '26',
+          name: 'Genghis Khan',
+          category: 'Military Leader & Emperor',
+          era: 'Medieval Mongolia',
+          description: 'Founder of the Mongol Empire, the largest contiguous land empire in history.',
+          traits: ['ruthless', 'strategic', 'unifying', 'adaptive'],
+          imageUrl: '/images/characters/genghis.svg',
+          placeholderColor: '#8b4513'
+        },
+        {
+          id: '27',
+          name: 'Akbar the Great',
+          category: 'Emperor',
+          era: 'Mughal India',
+          description: 'Mughal Emperor who created a diverse, tolerant empire and promoted religious harmony.',
+          traits: ['tolerant', 'wise', 'administrative', 'cultured'],
+          imageUrl: '/images/characters/akbar.svg',
+          placeholderColor: '#daa520'
+        },
+        {
+          id: '28',
+          name: 'Ramesses II',
+          category: 'Pharaoh',
+          era: 'Ancient Egypt',
+          description: 'Known as Ramesses the Great, he built numerous monuments and presided over Egypt\'s golden age.',
+          traits: ['mighty', 'builder', 'divine', 'enduring'],
+          imageUrl: '/images/characters/ramesses.svg',
+          placeholderColor: '#cd853f'
+        },
+        {
+          id: '29',
+          name: 'Cyrus the Great',
+          category: 'Emperor',
+          era: 'Ancient Persia',
+          description: 'Founder of the Persian Empire who created the first charter of human rights.',
+          traits: ['tolerant', 'just', 'administrative', 'expansive'],
+          imageUrl: '/images/characters/cyrus.svg',
+          placeholderColor: '#483d8b'
+        },
+        {
+          id: '30',
+          name: 'Ashoka the Great',
+          category: 'Emperor',
+          era: 'Ancient India',
+          description: 'Mauryan Emperor who embraced Buddhism and promoted non-violence after the Kalinga War.',
+          traits: ['compassionate', 'reformed', 'spiritual', 'peaceful'],
+          imageUrl: '/images/characters/ashoka.svg',
+          placeholderColor: '#ff6347'
+        },
+        {
+          id: '31',
+          name: 'Hammurabi',
+          category: 'King & Lawgiver',
+          era: 'Ancient Babylon',
+          description: 'King of Babylon who created one of the world\'s first written legal codes.',
+          traits: ['lawgiving', 'just', 'systematic', 'authoritative'],
+          imageUrl: '/images/characters/hammurabi.svg',
+          placeholderColor: '#696969'
+        },
+        {
+          id: '32',
+          name: 'Pericles',
+          category: 'Statesman',
+          era: 'Ancient Greece',
+          description: 'Athenian statesman who led Athens during its Golden Age and promoted democracy.',
+          traits: ['democratic', 'cultural', 'eloquent', 'visionary'],
+          imageUrl: '/images/characters/pericles.svg',
+          placeholderColor: '#1e90ff'
+        },
+        {
+          id: '33',
+          name: 'Justinian I',
+          category: 'Emperor',
+          era: 'Byzantine Empire',
+          description: 'Byzantine Emperor who created the Justinian Code and attempted to reconquer the Western Roman Empire.',
+          traits: ['legal', 'ambitious', 'religious', 'systematic'],
+          imageUrl: '/images/characters/justinian.svg',
+          placeholderColor: '#8a2be2'
+        },
+        {
+          id: '34',
+          name: 'Harun al-Rashid',
+          category: 'Caliph',
+          era: 'Islamic Golden Age',
+          description: 'Abbasid Caliph who ruled during the Islamic Golden Age and promoted learning and culture.',
+          traits: ['cultured', 'learned', 'generous', 'wise'],
+          imageUrl: '/images/characters/harun.svg',
+          placeholderColor: '#20b2aa'
+        },
+        {
+          id: '35',
+          name: 'Suleiman the Magnificent',
+          category: 'Sultan',
+          era: 'Ottoman Empire',
+          description: 'Ottoman Sultan who expanded the empire to its greatest extent and was known for legal reforms.',
+          traits: ['magnificent', 'legal', 'military', 'cultured'],
+          imageUrl: '/images/characters/suleiman.svg',
+          placeholderColor: '#dc143c'
+        },
+        {
+          id: '36',
+          name: 'Nebuchadnezzar II',
+          category: 'King',
+          era: 'Neo-Babylonian Empire',
+          description: 'King of Babylon who built the Hanging Gardens and made Babylon the greatest city in the world.',
+          traits: ['builder', 'magnificent', 'powerful', 'ambitious'],
+          imageUrl: '/images/characters/nebuchadnezzar.svg',
+          placeholderColor: '#b8860b'
+        },
+        {
+          id: '37',
+          name: 'Kublai Khan',
+          category: 'Emperor',
+          era: 'Yuan Dynasty China',
+          description: 'Grandson of Genghis Khan who founded the Yuan Dynasty in China and patronized arts.',
+          traits: ['cultured', 'adaptive', 'powerful', 'sophisticated'],
+          imageUrl: '/images/characters/kublai.svg',
+          placeholderColor: '#ff4500'
+        },
+        {
+          id: '38',
+          name: 'Darius the Great',
+          category: 'Emperor',
+          era: 'Ancient Persia',
+          description: 'Persian Emperor who organized the empire into satrapies and built the Royal Road.',
+          traits: ['administrative', 'organized', 'efficient', 'expansive'],
+          imageUrl: '/images/characters/darius.svg',
+          placeholderColor: '#4b0082'
+        },
+        {
+          id: '39',
+          name: 'Attila the Hun',
+          category: 'Military Leader',
+          era: 'Late Roman Empire',
+          description: 'Known as the "Scourge of God" who terrorized both Western and Eastern Roman Empires.',
+          traits: ['fearsome', 'strategic', 'nomadic', 'ruthless'],
+          imageUrl: '/images/characters/attila.svg',
+          placeholderColor: '#8b0000'
+        },
+        {
+          id: '40',
+          name: 'Shaka Zulu',
+          category: 'Military Leader & King',
+          era: '19th Century Africa',
+          description: 'Zulu king who revolutionized African military tactics and created a powerful warrior state.',
+          traits: ['innovative', 'warrior', 'tactical', 'transformative'],
+          imageUrl: '/images/characters/shaka.svg',
+          placeholderColor: '#228b22'
+        },
+        {
+          id: '41',
+          name: 'Tamerlane',
+          category: 'Military Leader & Emperor',
+          era: 'Medieval Central Asia',
+          description: 'Turco-Mongol conqueror who built a vast empire and styled himself as heir to Genghis Khan.',
+          traits: ['conquering', 'ruthless', 'architectural', 'ambitious'],
+          imageUrl: '/images/characters/tamerlane.svg',
+          placeholderColor: '#8b4513'
+        },
+        {
+          id: '42',
+          name: 'Xerxes I',
+          category: 'Emperor',
+          era: 'Ancient Persia',
+          description: 'Persian Emperor who led the massive invasion of Greece and ruled the largest empire yet seen.',
+          traits: ['imperial', 'ambitious', 'grandiose', 'powerful'],
+          imageUrl: '/images/characters/xerxes.svg',
+          placeholderColor: '#9932cc'
+        },
+        {
+          id: '43',
+          name: 'Mansa Musa',
+          category: 'Emperor',
+          era: 'Medieval Africa',
+          description: 'Emperor of Mali whose pilgrimage to Mecca distributed so much gold it affected Mediterranean economies.',
+          traits: ['wealthy', 'devout', 'generous', 'influential'],
+          imageUrl: '/images/characters/mansa.svg',
+          placeholderColor: '#ffd700'
+        },
+        {
+          id: '44',
+          name: 'Tokugawa Ieyasu',
+          category: 'Shogun',
+          era: 'Feudal Japan',
+          description: 'Founder of the Tokugawa shogunate who unified Japan and established lasting peace.',
+          traits: ['patient', 'strategic', 'unifying', 'diplomatic'],
+          imageUrl: '/images/characters/tokugawa.svg',
+          placeholderColor: '#2f4f4f'
+        },
+        {
+          id: '45',
+          name: 'Montezuma II',
+          category: 'Emperor',
+          era: 'Aztec Empire',
+          description: 'Aztec Emperor who ruled at the empire\'s height and was known for elaborate court rituals.',
+          traits: ['ritualistic', 'imperial', 'religious', 'sophisticated'],
+          imageUrl: '/images/characters/montezuma.svg',
+          placeholderColor: '#d2691e'
+        },
+        {
+          id: '46',
+          name: 'Pachacuti',
+          category: 'Emperor',
+          era: 'Inca Empire',
+          description: 'Inca Emperor who transformed Cusco into the Inca Empire and built Machu Picchu.',
+          traits: ['transformative', 'architectural', 'organizing', 'visionary'],
+          imageUrl: '/images/characters/pachacuti.svg',
+          placeholderColor: '#cd853f'
+        },
+        {
+          id: '47',
+          name: 'Hatshepsut',
+          category: 'Pharaoh',
+          era: 'Ancient Egypt',
+          description: 'Female pharaoh who ruled successfully for 22 years and built magnificent monuments.',
+          traits: ['pioneering', 'architectural', 'diplomatic', 'strong'],
+          imageUrl: '/images/characters/hatshepsut.svg',
+          placeholderColor: '#da70d6'
+        },
+        {
+          id: '48',
+          name: 'Sitting Bull',
+          category: 'Chief',
+          era: '19th Century America',
+          description: 'Lakota leader who led resistance against U.S. policies and played a key role at Little Bighorn.',
+          traits: ['spiritual', 'resistant', 'protective', 'wise'],
+          imageUrl: '/images/characters/sitting-bull.svg',
+          placeholderColor: '#8b4513'
+        },
+        {
+          id: '49',
+          name: 'Simón Bolívar',
+          category: 'Revolutionary Leader',
+          era: '19th Century South America',
+          description: 'Known as El Libertador, he liberated much of South America from Spanish rule.',
+          traits: ['liberating', 'visionary', 'passionate', 'unifying'],
+          imageUrl: '/images/characters/bolivar.svg',
+          placeholderColor: '#ff6347'
+        },
+        {
+          id: '50',
+          name: 'Nefertiti',
+          category: 'Queen',
+          era: 'Ancient Egypt',
+          description: 'Queen of Egypt known for her beauty and powerful influence during religious reforms.',
+          traits: ['beautiful', 'influential', 'religious', 'powerful'],
+          imageUrl: '/images/characters/nefertiti.svg',
+          placeholderColor: '#dda0dd'
         }
       ];
     }
@@ -174,9 +562,6 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
     return characters;
   }, [characters]);
 
-  const handleStartConversation = (characterId: string) => {
-    router.push(`/conversation?characters=${characterId}`);
-  };
 
   return (
     <Grid container spacing={3}>
@@ -192,17 +577,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
               boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
             }
           }}>
-            <CardMedia
-              component="img"
-              height="200"
-              image={character.imageUrl || '/images/placeholder.jpg'}
-              alt={character.name}
-              sx={{ objectFit: 'cover' }}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = '/images/placeholder.jpg';
-              }}
-            />
+            <CharacterPlaceholder character={character} />
             <CardContent sx={{ flexGrow: 1 }}>
               <Typography gutterBottom variant="h5" component="div">
                 {character.name}
@@ -225,16 +600,6 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
                 ))}
               </Box>
             </CardContent>
-            <CardActions>
-              <Button 
-                size="small" 
-                onClick={() => handleStartConversation(character.id)}
-                variant="contained" 
-                fullWidth
-              >
-                Converse
-              </Button>
-            </CardActions>
           </Card>
         </Grid>
       ))}

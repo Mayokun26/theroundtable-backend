@@ -2,8 +2,38 @@ import express from 'express';
 
 export const conversationRoutes = express.Router();
 
+// Import the AI service
+const { generateResponse } = require('../services/aiService');
+
+// Import the full character data
+const characters = require('../data/characters');
+
+// Function to detect if a message is targeted at specific characters
+function detectTargetedCharacters(message: string, availableCharacters: string[]): string[] {
+  const messageWords = message.toLowerCase().split(/\s+/);
+  const targetedCharacters: string[] = [];
+  
+  for (const characterId of availableCharacters) {
+    const character = characters.find((char: any) => char.id === characterId);
+    if (!character) continue;
+    
+    const nameParts = character.name.toLowerCase().split(' ');
+    const hasFullName = nameParts.every((part: string) => messageWords.includes(part));
+    const hasFirstName = messageWords.includes(nameParts[0]);
+    const hasLastName = nameParts.length > 1 && messageWords.includes(nameParts[nameParts.length - 1]);
+    
+    if (hasFullName || hasFirstName || hasLastName) {
+      targetedCharacters.push(characterId);
+    }
+  }
+  
+  return targetedCharacters;
+}
+
+// Character data is now imported from the characters.js file
+
 // Create a new conversation or add a message
-conversationRoutes.post('/', (req, res) => {
+conversationRoutes.post('/', async (req, res) => {
   const { message, characters } = req.body;
   
   if (!message || !characters || !Array.isArray(characters)) {
@@ -13,20 +43,49 @@ conversationRoutes.post('/', (req, res) => {
     });
   }
   
-  // Mock response data
-  const responses = characters.map(characterId => ({
-    characterId,
-    name: characterId === '1' ? 'Socrates' : characterId === '2' ? 'Marie Curie' : 'Sun Tzu',
-    content: `This is a mock response from character ${characterId} to the message: "${message}"`
-  }));
-  
-  res.status(201).json({
-    status: 'success',
-    data: {
-      conversationId: 'mock-conversation-id',
-      responses
+  try {
+    // Check if message is targeted at specific characters
+    const targetedCharacters = detectTargetedCharacters(message, characters);
+    const respondingCharacters = targetedCharacters.length > 0 ? targetedCharacters : characters;
+    
+    // Generate responses for each character
+    const responses = [];
+    
+    for (const characterId of respondingCharacters) {
+      const character = characters.find((char: any) => char.id === characterId);
+      if (!character) {
+        continue; // Skip unknown characters
+      }
+      
+      try {
+        const content: string = await generateResponse(character, message, responses);
+        responses.push({
+          id: characterId,
+          name: character.name,
+          content
+        });
+      } catch (error) {
+        console.error(`Error generating response for ${character.name}:`, error);
+        // Add fallback response
+        responses.push({
+          id: characterId,
+          name: character.name,
+          content: `I apologize, but I'm having trouble formulating a response right now. Please try again.`
+        });
+      }
     }
-  });
+    
+    res.status(201).json({
+      status: 'success',
+      responses
+    });
+  } catch (error) {
+    console.error('Error processing conversation:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to generate responses. Please try again.'
+    });
+  }
 });
 
 // Get conversation history

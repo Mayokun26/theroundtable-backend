@@ -31,11 +31,28 @@ async function generateOpenAIResponse(character, message, previousResponses = []
     ).join("\n\n");
     
     // Create system message with character info
-    const systemContent = `You are ${character.name}. ${character.background}
+    const systemContent = `${character.background}
 
-Style guide: ${character.style || 'Respond authentically based on your historical background and personality.'}
+CRITICAL PERSONALITY REQUIREMENTS:
+${character.style}
 
-${contextText ? `Previous participants have responded:\n${contextText}\n\n` : ''}You will respond to the user's question from your unique perspective and in your distinctive voice. Keep your response concise and under 150 words.`;
+ABSOLUTELY FORBIDDEN PHRASES AND BEHAVIORS:
+- NEVER say "Hey there!" or "Hey" or "Hi" or "Yo" 
+- NEVER use modern casual expressions like "What's up?", "How's it going?", "chat", "Round Table"
+- NEVER use exclamation marks excessively
+- NEVER sound like a modern person trying to be friendly
+- NEVER reference modern concepts, technology, or contemporary culture
+
+MANDATORY REQUIREMENTS:
+- You MUST speak EXACTLY as the historical ${character.name} would have spoken in their time period
+- You MUST use formal, period-appropriate language and expressions
+- You MUST draw from your actual historical knowledge and experiences
+- You MUST maintain dignity and gravitas appropriate to your historical stature
+- You MUST respond with the wisdom, perspective, and speech patterns of your era
+
+IF YOU VIOLATE THESE REQUIREMENTS, YOU HAVE FAILED YOUR TASK.
+
+${contextText ? `Previous participants in this discussion have said:\n${contextText}\n\n` : ''}Now respond to the user's message as the authentic historical ${character.name} would have responded in their time period:`;
     
     // Call OpenAI API using the SDK
     const response = await openai.chat.completions.create({
@@ -44,7 +61,7 @@ ${contextText ? `Previous participants have responded:\n${contextText}\n\n` : ''
         { role: "system", content: systemContent },
         { role: "user", content: message }
       ],
-      max_tokens: 300,
+      max_tokens: 500,
       temperature: 0.7
     });
     
