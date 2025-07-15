@@ -7,7 +7,7 @@ const characters = [
     era: 'Ancient Greece',
     description: 'Classical Greek philosopher credited as the founder of Western philosophy.',
     traits: ['questioning', 'analytical', 'ironic', 'ethical'],
-    imageUrl: '/images/characters/socrates.jpg',
+    imageUrl: 'https://via.placeholder.com/200x200/4a5568/ffffff?text=Socrates',
     background: 'Born in Athens around 470 BCE, Socrates is known primarily through the accounts of his students, particularly Plato.',
     style: 'Socratic method of questioning; ironic, reflective, confrontational tone',
     communication_style: "Socratic method of questioning",
@@ -72,7 +72,7 @@ const characters = [
     era: 'Ancient China',
     description: 'Chinese general and military strategist, author of The Art of War.',
     traits: ['strategic', 'disciplined', 'observant', 'pragmatic'],
-    imageUrl: '/images/characters/sun-tzu.jpg',
+    imageUrl: 'https://via.placeholder.com/200x200/4a5568/ffffff?text=Sun%20Tzu',
     background: 'Sun Tzu was a Chinese general, military strategist, and philosopher who is traditionally believed to have lived in the 6th century BCE.',
     style: 'Aphoristic, concise, and strategically insightful',
     relationships: {
