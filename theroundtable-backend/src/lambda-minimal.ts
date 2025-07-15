@@ -183,13 +183,21 @@ export const handler = async (
               };
             }
 
-            // Check if this character should respond
-            const isAddressed = message.toLowerCase().includes(character.name.toLowerCase());
+            // Check if this character should respond (full name or partial match)
+            const messageLower = message.toLowerCase();
+            const nameLower = character.name.toLowerCase();
+            const isAddressed = messageLower.includes(nameLower) || 
+                              nameLower.includes(messageLower.split(' ')[0]) || // First word match
+                              (character.name.startsWith(messageLower.split(' ')[0]) && messageLower.split(' ')[0].length > 2); // Partial name match
             
             // Check if ANY character is addressed in the message
             const anyCharacterAddressed = selectedCharacters.some((id: string) => {
               const char = charactersData.find((c: any) => c.id === id);
-              return char && message.toLowerCase().includes(char.name.toLowerCase());
+              if (!char) return false;
+              const charNameLower = char.name.toLowerCase();
+              return messageLower.includes(charNameLower) || 
+                     charNameLower.includes(messageLower.split(' ')[0]) || 
+                     (char.name.startsWith(messageLower.split(' ')[0]) && messageLower.split(' ')[0].length > 2);
             });
             
             // Only respond if:
