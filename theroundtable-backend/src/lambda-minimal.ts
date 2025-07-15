@@ -185,7 +185,7 @@ export const handler = async (
 
             // Check if this character should respond
             const isAddressed = message.toLowerCase().includes(character.name.toLowerCase());
-            const isGeneralQuestion = !selectedCharacters.some(id => {
+            const isGeneralQuestion = !selectedCharacters.some((id: string) => {
               const char = charactersData.find((c: any) => c.id === id);
               return char && message.toLowerCase().includes(char.name.toLowerCase());
             });
