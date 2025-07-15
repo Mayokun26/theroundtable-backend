@@ -185,14 +185,18 @@ export const handler = async (
 
             // Check if this character should respond
             const isAddressed = message.toLowerCase().includes(character.name.toLowerCase());
-            const isGeneralQuestion = !selectedCharacters.some((id: string) => {
+            
+            // Check if ANY character is addressed in the message
+            const anyCharacterAddressed = selectedCharacters.some((id: string) => {
               const char = charactersData.find((c: any) => c.id === id);
               return char && message.toLowerCase().includes(char.name.toLowerCase());
             });
             
-            // Skip if not addressed and it's a targeted question
-            if (!isAddressed && !isGeneralQuestion) {
-              return null; // This character won't respond
+            // Only respond if:
+            // 1. This character is directly addressed, OR
+            // 2. No character is addressed (general question)
+            if (!isAddressed && anyCharacterAddressed) {
+              return null; // This character won't respond - someone else was addressed
             }
 
             // Create conversation context
