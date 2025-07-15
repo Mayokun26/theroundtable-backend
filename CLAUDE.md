@@ -77,6 +77,16 @@ npm test            # Run tests
 npm run deploy      # Build and create Docker image
 ```
 
+### Lambda Deployment (theroundtable-backend)
+**Note**: The standard `npm run build:lambda` zip creation fails. Use this PowerShell workflow instead:
+```powershell
+cd "C:\Users\Oreko\work\TheRoundTable\theroundtable-backend"
+npm run build:lambda
+cd dist
+Compress-Archive -Path * -DestinationPath lambda.zip -Force
+aws lambda update-function-code --function-name theroundtable-backend-dev --zip-file fileb://lambda.zip
+```
+
 ### Infrastructure
 ```bash
 # From root directory
