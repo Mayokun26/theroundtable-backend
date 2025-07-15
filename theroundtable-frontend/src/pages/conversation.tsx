@@ -7,9 +7,7 @@ import {
   Button, 
   Card, 
   CardContent, 
-  CardMedia, 
   Checkbox, 
-  FormControlLabel,
   CircularProgress,
   Alert,
   AppBar,
@@ -63,17 +61,66 @@ const ConversationPage: React.FC = () => {
   useEffect(() => {
     const fetchCharacters = async () => {
       try {
-        const response = await fetch('/api/characters');
-        if (!response.ok) {
-          throw new Error('Failed to fetch characters');
+        // Check API health first
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        try {
+          const healthResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          
+          if (healthResponse.ok) {
+            // Load characters from backend API
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/characters`);
+            if (!response.ok) {
+              throw new Error('Failed to fetch characters');
+            }
+            const data = await response.json();
+            setCharacters(Array.isArray(data.data) ? data.data : []);
+          } else {
+            throw new Error('API health check failed');
+          }
+        } catch (error) {
+          clearTimeout(timeoutId);
+          throw error;
         }
-        const data = await response.json();
-        setCharacters(Array.isArray(data) ? data : []);
+        
         setLoading(false);
       } catch (err) {
-        setError('Error loading characters. Please try again later.');
-        setLoading(false);
         console.error('Error fetching characters:', err);
+        // Show fallback characters if API fails
+        setCharacters([
+          {
+            id: '1',
+            name: 'Socrates',
+            category: 'Philosopher',
+            era: 'Ancient Greece',
+            description: 'Classical Greek philosopher credited as the founder of Western philosophy.',
+            traits: ['questioning', 'analytical', 'ironic', 'ethical'],
+            imageUrl: '/images/characters/socrates.jpg'
+          },
+          {
+            id: '2',
+            name: 'Marie Curie',
+            category: 'Scientist',
+            era: '19th-20th Century',
+            description: 'Pioneer in research on radioactivity and the first woman to win a Nobel Prize.',
+            traits: ['determined', 'focused', 'diligent'],
+            imageUrl: '/images/characters/marie-curie.jpg'
+          },
+          {
+            id: '3',
+            name: 'Sun Tzu',
+            category: 'Military Strategist',
+            era: 'Ancient China',
+            description: 'Chinese general and military strategist, author of The Art of War.',
+            traits: ['strategic', 'disciplined', 'observant', 'pragmatic'],
+            imageUrl: '/images/characters/sun-tzu.jpg'
+          }
+        ]);
+        setLoading(false);
       }
     };
 
@@ -126,7 +173,7 @@ const ConversationPage: React.FC = () => {
 
     try {
       // Send the message to the API
-      const response = await fetch('/api/conversations', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,7 +192,7 @@ const ConversationPage: React.FC = () => {
       if (data.responses && data.responses.length > 0) {
         // Add a slight delay before showing responses to simulate thinking time
         setTimeout(() => {
-          data.responses.forEach((resp: any, index: number) => {
+          data.responses.forEach((resp: { id?: string; name: string; content: string }, index: number) => {
             const characterResponse: Message = {
               id: `character-${messages.length + index + 2}`,
               content: resp.content,

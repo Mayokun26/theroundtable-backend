@@ -26,3 +26,19 @@ variable "alternative_domain_names" {
   type        = list(string)
   default     = []
 }
+
+variable "contact_info" {
+  description = "Contact information for domain registration"
+  type = object({
+    address_line_1 = string
+    city          = string
+    country_code  = string
+    email         = string
+    first_name    = string
+    last_name     = string
+    phone_number  = string
+    state         = string
+    zip_code      = string
+  })
+  sensitive = true
+}

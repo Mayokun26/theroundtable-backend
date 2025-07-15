@@ -23,7 +23,14 @@
       "Bash(timeout 120s npm run build)",
       "Bash(git count-objects:*)",
       "Bash(git gc:*)",
-      "Bash(exit)"
+      "Bash(exit)",
+      "Bash(mv:*)",
+      "Bash(npm run:*)",
+      "Bash(rg:*)",
+      "Bash(powershell:*)",
+      "Bash(dir lambda.zip)",
+      "Bash(zip:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   }

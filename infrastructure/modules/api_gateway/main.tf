@@ -28,6 +28,33 @@ resource "aws_apigatewayv2_route" "any" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+# Add a route for the root path as well
+resource "aws_apigatewayv2_route" "root" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "ANY /"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Add specific routes for testing
+resource "aws_apigatewayv2_route" "health" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /health"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "characters" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /characters"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Add a catch-all route to ensure requests reach Lambda
+resource "aws_apigatewayv2_route" "catch_all" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "$default"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"

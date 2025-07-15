@@ -26,11 +26,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **PowerShell Commands to Provide:**
 ```powershell
-cd "C:\Users\Oreko\work\TheRoundTable"
+cd "C:\Users\Oreko\work\theroundtable"
 git status
 git push origin [branch-name]
 gh pr create --title "[title]" --body "[description]"
 ```
+
+**Important**: Always provide absolute path commands to avoid directory confusion:
+- For git operations: Start with `cd "C:\Users\Oreko\work\theroundtable"`
+- For frontend operations: Start with `cd "C:\Users\Oreko\work\theroundtable\theroundtable-frontend"`
+- For backend operations: Start with `cd "C:\Users\Oreko\work\theroundtable\theroundtable-backend"`
 
 **This workflow is mandatory** - do not attempt WSL git push operations.
 
@@ -82,13 +87,13 @@ npm run deploy      # Build and create Docker image
 ## Architecture
 
 ### Backend Structure
-- **Entry Point**: `src/index.ts` - Initializes MongoDB, Redis, and starts the server
+- **Entry Point**: `src/index.ts` - Initializes DynamoDB, Redis, and starts the server
 - **Server Setup**: `src/server.ts` - Express app configuration with middleware
 - **Routes**: RESTful API endpoints in `src/routes/`
   - `/api/health` - Health check endpoint
   - `/api/characters` - Character management
   - `/api/conversations` - Conversation handling
-- **Database**: MongoDB with Mongoose for character and conversation data
+- **Database**: DynamoDB with AWS SDK for character and conversation data
 - **Caching**: Redis for session management and performance optimization
 - **Services**: AI integration through OpenAI API
 - **Middleware**: Error handling, request logging, rate limiting, CORS
@@ -110,7 +115,7 @@ npm run deploy      # Build and create Docker image
 
 ### Required Environment Variables
 Backend requires:
-- Database connection (MongoDB)
+- Database connection (DynamoDB via AWS SDK)
 - Redis connection (optional, falls back gracefully)
 - OpenAI API key
 - AWS credentials for deployment
@@ -121,7 +126,7 @@ Frontend requires:
 ### Development Prerequisites
 - Node.js v18+
 - Redis (optional for development)
-- MongoDB connection
+- DynamoDB access (via AWS credentials)
 - AWS credentials (for deployment)
 - Docker (for containerization)
 
@@ -176,7 +181,7 @@ npm run deploy      # Build and create Docker image for Lambda deployment
 
 ## Database and API Integration
 
-- **Character Data**: Stored in MongoDB, cached in Redis
+- **Character Data**: Stored in DynamoDB, cached in Redis
 - **Conversations**: Persistent storage with real-time AI responses
 - **Error Handling**: Graceful fallbacks when external services are unavailable
 - **Rate Limiting**: Configured to prevent API abuse

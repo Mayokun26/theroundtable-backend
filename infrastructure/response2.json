@@ -1,0 +1,1 @@
+{"statusCode":200,"headers":{"Content-Type":"application/json","Access-Control-Allow-Origin":"*"},"body":"{\"status\":\"healthy\",\"timestamp\":\"2025-07-15T00:37:49.386Z\",\"path\":\"/health\",\"method\":\"GET\"}"}

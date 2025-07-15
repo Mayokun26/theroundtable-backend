@@ -28,7 +28,7 @@ catch {
 Write-Host "Configuring environment variables..." -ForegroundColor Yellow
 $envFile = Join-Path $frontendDir ".env.production"
 $apiUrl = "https://api.$domainName"
-"NEXT_PUBLIC_API_URL=$apiUrl" | Out-File -FilePath $envFile -Force
+"NEXT_PUBLIC_API_URL=$apiUrl" | Out-File -FilePath $envFile -Force -Encoding utf8
 Write-Host "Environment configured with API URL: $apiUrl" -ForegroundColor Green
 
 # Go to the frontend directory

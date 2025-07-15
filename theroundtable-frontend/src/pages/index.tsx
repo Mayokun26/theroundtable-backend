@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import axios from 'axios';
-import { Box, Button, Typography, Container, Grid, CircularProgress } from '@mui/material';
+import { Box, Button, Typography, Container, CircularProgress } from '@mui/material';
 import CharacterGrid from '../components/CharacterGrid';
 
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const [characters, setCharacters] = useState([]);
   const [apiStatus, setApiStatus] = useState<'loading' | 'connected' | 'error'>('loading');
   
