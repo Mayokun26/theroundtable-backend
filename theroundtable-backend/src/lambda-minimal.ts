@@ -188,18 +188,20 @@ export const handler = async (
             const nameLower = character.name.toLowerCase();
             const firstWord = messageLower.split(/[,\s]+/)[0]; // Get first word, handle commas
             
-            // Simple matching with fuzzy logic for common typos
+            // Simple matching with better fuzzy logic
             const firstName = nameLower.split(' ')[0]; // Get first part of character name
             const isAddressed = (firstWord.length > 2) && (
               nameLower.includes(firstWord) || 
               firstWord.includes(firstName) ||
               firstName.includes(firstWord) ||
-              // Handle common typos (check if 80% of letters match)
-              (firstWord.length >= 4 && firstName.length >= 4 && 
-               [...firstWord].filter(c => firstName.includes(c)).length >= Math.floor(firstWord.length * 0.8))
+              // Better fuzzy matching: check if firstWord is a reasonable prefix/substring of firstName
+              (firstWord.length >= 3 && firstName.startsWith(firstWord.substring(0, 3))) ||
+              // Handle single character differences (malcom vs malcolm)
+              (Math.abs(firstWord.length - firstName.length) <= 1 && 
+               firstName.startsWith(firstWord.substring(0, Math.min(firstWord.length, firstName.length) - 1)))
             );
             
-            // Check if ANY character is addressed in the message (using same fuzzy logic)
+            // Check if ANY character is addressed in the message (using same improved fuzzy logic)
             const anyCharacterAddressed = selectedCharacters.some((id: string) => {
               const char = charactersData.find((c: any) => c.id === id);
               if (!char) return false;
@@ -209,9 +211,11 @@ export const handler = async (
                 charNameLower.includes(firstWord) || 
                 firstWord.includes(charFirstName) ||
                 charFirstName.includes(firstWord) ||
-                // Handle common typos (check if 80% of letters match)
-                (firstWord.length >= 4 && charFirstName.length >= 4 && 
-                 [...firstWord].filter(c => charFirstName.includes(c)).length >= Math.floor(firstWord.length * 0.8))
+                // Better fuzzy matching: check if firstWord is a reasonable prefix/substring of charFirstName
+                (firstWord.length >= 3 && charFirstName.startsWith(firstWord.substring(0, 3))) ||
+                // Handle single character differences (malcom vs malcolm)
+                (Math.abs(firstWord.length - charFirstName.length) <= 1 && 
+                 charFirstName.startsWith(firstWord.substring(0, Math.min(firstWord.length, charFirstName.length) - 1)))
               );
             });
             
@@ -234,7 +238,7 @@ CRITICAL: DO NOT be formal, academic, or stiff. Be natural and conversational li
 
 ${character.description}
 
-When someone says "Hiya Hiya Hiya" - respond warmly and casually! Don't lecture about communication. Be friendly and human.
+Don't repeat previous greetings from conversation history. Respond naturally to the current message only.
 
 PERSONALITY:
 - Talk like a real person, not a textbook
