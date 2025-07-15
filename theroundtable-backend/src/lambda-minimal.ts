@@ -183,21 +183,36 @@ export const handler = async (
               };
             }
 
-            // Check if this character should respond (full name or partial match)
+            // Check if this character should respond (simple partial matching)
             const messageLower = message.toLowerCase();
             const nameLower = character.name.toLowerCase();
-            const isAddressed = messageLower.includes(nameLower) || 
-                              nameLower.includes(messageLower.split(' ')[0]) || // First word match
-                              (character.name.startsWith(messageLower.split(' ')[0]) && messageLower.split(' ')[0].length > 2); // Partial name match
+            const firstWord = messageLower.split(/[,\s]+/)[0]; // Get first word, handle commas
             
-            // Check if ANY character is addressed in the message
+            // Simple matching with fuzzy logic for common typos
+            const firstName = nameLower.split(' ')[0]; // Get first part of character name
+            const isAddressed = (firstWord.length > 2) && (
+              nameLower.includes(firstWord) || 
+              firstWord.includes(firstName) ||
+              firstName.includes(firstWord) ||
+              // Handle common typos (check if 80% of letters match)
+              (firstWord.length >= 4 && firstName.length >= 4 && 
+               [...firstWord].filter(c => firstName.includes(c)).length >= Math.floor(firstWord.length * 0.8))
+            );
+            
+            // Check if ANY character is addressed in the message (using same fuzzy logic)
             const anyCharacterAddressed = selectedCharacters.some((id: string) => {
               const char = charactersData.find((c: any) => c.id === id);
               if (!char) return false;
               const charNameLower = char.name.toLowerCase();
-              return messageLower.includes(charNameLower) || 
-                     charNameLower.includes(messageLower.split(' ')[0]) || 
-                     (char.name.startsWith(messageLower.split(' ')[0]) && messageLower.split(' ')[0].length > 2);
+              const charFirstName = charNameLower.split(' ')[0];
+              return (firstWord.length > 2) && (
+                charNameLower.includes(firstWord) || 
+                firstWord.includes(charFirstName) ||
+                charFirstName.includes(firstWord) ||
+                // Handle common typos (check if 80% of letters match)
+                (firstWord.length >= 4 && charFirstName.length >= 4 && 
+                 [...firstWord].filter(c => charFirstName.includes(c)).length >= Math.floor(firstWord.length * 0.8))
+              );
             });
             
             // Only respond if:
