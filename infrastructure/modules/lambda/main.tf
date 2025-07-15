@@ -2,7 +2,7 @@ resource "aws_lambda_function" "backend" {
   filename         = "../theroundtable-backend/dist/lambda.zip"
   function_name    = "${var.project_name}-backend-${var.environment}"
   role            = aws_iam_role.lambda_exec.arn
-  handler         = "lambda.handler"
+  handler         = "lambda-minimal.handler"
   runtime         = "nodejs18.x"
   memory_size     = 256
   timeout         = 30

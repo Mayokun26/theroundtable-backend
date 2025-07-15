@@ -14,7 +14,6 @@ import {
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function SignUp() {
-  const router = useRouter();
   const { signUp, loading, error } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,7 +64,7 @@ export default function SignUp() {
               Check Your Email
             </Typography>
             <Typography sx={{ mt: 2, textAlign: 'center' }}>
-              We've sent a confirmation code to your email address. Please check your inbox and enter the code to complete your registration.
+              We&apos;ve sent a confirmation code to your email address. Please check your inbox and enter the code to complete your registration.
             </Typography>
             <Button
               component={Link}

@@ -30,6 +30,7 @@ module "route53" {
   environment  = var.environment
   project_name = var.project_name
   domain_name  = var.domain_name
+  contact_info = var.contact_info
 }
 
 # Then ACM Certificate
