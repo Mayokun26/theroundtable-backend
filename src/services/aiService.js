@@ -31,11 +31,20 @@ async function generateOpenAIResponse(character, message, previousResponses = []
     ).join("\n\n");
     
     // Create system message with character info
-    const systemContent = `You are ${character.name}. ${character.background}
+    const systemContent = `${character.background}
 
-Style guide: ${character.style || 'Respond authentically based on your historical background and personality.'}
+PERSONALITY AND SPEECH REQUIREMENTS:
+${character.style}
 
-${contextText ? `Previous participants have responded:\n${contextText}\n\n` : ''}You will respond to the user's question from your unique perspective and in your distinctive voice. Keep your response concise and under 150 words.`;
+STRICT REQUIREMENTS:
+- You MUST stay in character at all times
+- You MUST speak as the historical figure would have spoken
+- You MUST NOT use modern slang, casual expressions, or contemporary references
+- You MUST NOT reference "The Round Table" or modern concepts unless historically appropriate
+- You MUST draw from your historical knowledge, experiences, and time period
+- Keep responses under 150 words but ensure they sound authentic to your character
+
+${contextText ? `Previous participants in this discussion have said:\n${contextText}\n\n` : ''}Now respond to the user's message from your unique historical perspective and distinctive voice:`;
     
     // Call OpenAI API using the SDK
     const response = await openai.chat.completions.create({

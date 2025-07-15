@@ -5,13 +5,20 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
+    "build:lambda": "tsc && npm run copy:data && npm run copy:package && npm run copy:modules && npm run package:lambda",
+    "build:minimal": "tsc src/lambda-minimal.ts --outDir dist",
+    "copy:data": "powershell -Command \"Copy-Item -Path 'src/data' -Destination 'dist/data' -Recurse -Force\"",
+    "copy:package": "powershell -Command \"Copy-Item -Path 'package.json' -Destination 'dist/package.json' -Force\"",
+    "copy:modules": "powershell -Command \"cd dist; npm install --production --omit=dev\"",
+    "package:lambda": "powershell -Command \"if (Test-Path 'lambda.zip') { Remove-Item 'lambda.zip' }; cd dist; Remove-Item -Recurse -Force node_modules/.cache 2>$null; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('.', '../lambda.zip'); Move-Item '../lambda.zip' 'lambda.zip' -Force\"",
     "start": "node dist/index.js",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
     "type-check": "tsc --noEmit",
     "docker-build": "docker build -t theroundtable-backend:latest .",
     "docker-run": "docker run -p 5001:5001 theroundtable-backend:latest",
-    "deploy": "npm run build && npm run docker-build"
+    "deploy": "npm run build:lambda",
+    "deploy:docker": "npm run build && npm run docker-build"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +40,7 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
     "@types/cors": "^2.8.0",
     "@types/express": "^4.17.0",
     "@types/jest": "^29.0.0",
@@ -42,9 +50,9 @@
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "jest": "^29.0.0",
-    "ts-node-dev": "^2.0.0",
     "ts-jest": "^29.0.0",
     "ts-node": "^10.9.0",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0"
   }
 }
