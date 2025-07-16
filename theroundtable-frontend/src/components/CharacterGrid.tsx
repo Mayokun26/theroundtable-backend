@@ -697,7 +697,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
           const canSelect = !isSelected && !isSelectionLimitReached;
           
           return (
-            <Grid item xs={12} sm={6} md={4} key={character.id}>
+            <Grid item xs={12} sm={6} md={6} lg={4} key={character.id}>
               <Card 
                 sx={{ 
                   height: '100%', 

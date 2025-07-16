@@ -245,7 +245,7 @@ const ConversationPage: React.FC = () => {
             if (index === sortedResponses.length - 1) {
               setSendingMessage(false);
             }
-          }, (index + 1) * 1500); // Slightly longer delays for better typing effect
+          }, (index + 1) * 2000); // Longer delays to allow full typing effect
         });
       } else {
         throw new Error('No responses received');
@@ -295,7 +295,7 @@ const ConversationPage: React.FC = () => {
       <Container maxWidth="xl" sx={{ mt: 4 }}>
         <Grid container spacing={3}>
           {/* Left side - Character Selection */}
-          <Grid item xs={12} md={4} lg={3}>
+          <Grid item xs={12} md={5} lg={4}>
             <Box sx={{ position: 'sticky', top: '20px' }}>
               <Typography variant="h5" component="h2" gutterBottom>
                 Select Your Panel
@@ -326,7 +326,7 @@ const ConversationPage: React.FC = () => {
           </Grid>
           
           {/* Right side - Conversation */}
-          <Grid item xs={12} md={8} lg={9}>
+          <Grid item xs={12} md={7} lg={8}>
             <Box sx={{ height: 'calc(100vh - 120px)' }}>
               <ConversationPanel 
                 messages={messages} 
