@@ -1,6 +1,125 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import * as https from 'https';
 
+// Function to parse user targeting from message
+function parseCharacterTargeting(message: string, characters: any[]): string[] {
+  const messageLower = message.toLowerCase();
+  const targetedCharacters: string[] = [];
+  
+  // Extract first few words to check for character names
+  const words = messageLower.split(/[,\s]+/).slice(0, 5);
+  
+  for (const character of characters) {
+    const nameLower = character.name.toLowerCase();
+    const nameParts = nameLower.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts[nameParts.length - 1];
+    
+    // Check for various targeting patterns
+    const isTargeted = words.some(word => {
+      if (word.length < 3) return false;
+      
+      // Direct name match
+      if (nameLower.includes(word) || word.includes(firstName)) return true;
+      
+      // Fuzzy matching for common misspellings
+      if (firstName.startsWith(word.substring(0, 3))) return true;
+      if (word.startsWith(firstName.substring(0, 3))) return true;
+      
+      // Last name matching
+      if (nameParts.length > 1 && (lastName.includes(word) || word.includes(lastName))) return true;
+      
+      return false;
+    });
+    
+    if (isTargeted) {
+      targetedCharacters.push(character.id);
+    }
+  }
+  
+  return targetedCharacters;
+}
+
+// Function to calculate response order based on targeting and relevance
+function calculateResponseOrder(message: string, characters: any[], targetedCharacters: string[]): { primary: string[], secondary: string[] } {
+  const allCharacterIds = characters.map(c => c.id);
+  
+  if (targetedCharacters.length > 0) {
+    // Targeted characters respond first, others are secondary
+    const nonTargeted = allCharacterIds.filter(id => !targetedCharacters.includes(id));
+    return {
+      primary: targetedCharacters,
+      secondary: nonTargeted
+    };
+  }
+  
+  // General question - all respond as primary, none as secondary initially
+  return {
+    primary: allCharacterIds,
+    secondary: []
+  };
+}
+
+// Function to determine if a character should interact with another's response
+function shouldCharacterInteract(
+  character: any, 
+  primaryResponse: any, 
+  userMessage: string,
+  characters: any[]
+): boolean {
+  // Don't interact with your own response
+  if (character.id === primaryResponse.id) return false;
+  
+  const messageLower = userMessage.toLowerCase();
+  const responseContentLower = primaryResponse.content.toLowerCase();
+  
+  // Check for topic overlap based on categories
+  const topicOverlap = character.category === characters.find(c => c.id === primaryResponse.id)?.category;
+  
+  // Check for era proximity (similar time periods might interact)
+  const characterEra = character.era?.toLowerCase() || '';
+  const primaryEra = characters.find(c => c.id === primaryResponse.id)?.era?.toLowerCase() || '';
+  const eraProximity = characterEra.includes('ancient') && primaryEra.includes('ancient') ||
+                      characterEra.includes('medieval') && primaryEra.includes('medieval') ||
+                      characterEra.includes('renaissance') && primaryEra.includes('renaissance');
+  
+  // Check for historical relationships (we'll enhance this)
+  const hasHistoricalConnection = checkHistoricalConnection(character.name, characters.find(c => c.id === primaryResponse.id)?.name);
+  
+  // Check for disagreement opportunities based on categories
+  const disagreementPotential = (character.category === 'Military Leader' && primaryResponse.content.includes('strategy')) ||
+                               (character.category === 'Philosopher' && (messageLower.includes('truth') || messageLower.includes('meaning'))) ||
+                               (character.category === 'Scientist' && (messageLower.includes('evidence') || messageLower.includes('method')));
+  
+  // Interaction scoring
+  let score = 0;
+  if (topicOverlap) score += 0.4;
+  if (eraProximity) score += 0.3;
+  if (hasHistoricalConnection) score += 0.6;
+  if (disagreementPotential) score += 0.5;
+  
+  // Random factor to add variety
+  score += Math.random() * 0.2;
+  
+  return score > 0.6;
+}
+
+// Function to check historical relationships (basic version)
+function checkHistoricalConnection(name1: string, name2: string): boolean {
+  const relationships = {
+    'Socrates': ['Plato'],
+    'Plato': ['Socrates', 'Aristotle'],
+    'Aristotle': ['Plato', 'Alexander the Great'],
+    'Alexander the Great': ['Aristotle'],
+    'Julius Caesar': ['Cleopatra'],
+    'Cleopatra': ['Julius Caesar'],
+    'Napoleon Bonaparte': ['Frederick the Great'],
+    'Frederick the Great': ['Napoleon Bonaparte']
+  };
+  
+  return relationships[name1]?.includes(name2) || relationships[name2]?.includes(name1) || false;
+}
+
 // Function to generate character responses using OpenAI
 async function generateCharacterResponse(character: any, userMessage: string, systemPrompt: string): Promise<string> {
   const rawApiKey = process.env.OPENAI_API_KEY || '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';
@@ -174,71 +293,41 @@ export const handler = async (
       const charactersData = require('./data/characters');
       
       try {
-        const allResponses = await Promise.all(
-          selectedCharacters.map(async (charId: string) => {
-            const character = charactersData.find((c: any) => c.id === charId);
-            if (!character) {
-              return {
-                id: charId,
-                name: 'Unknown Character',
-                content: 'I apologize, but I could not find information about this character.'
-              };
-            }
+        // Get available characters
+        const availableCharacters = selectedCharacters.map((id: string) => 
+          charactersData.find((c: any) => c.id === id)
+        ).filter(Boolean);
 
-            // Check if this character should respond (simple partial matching)
-            const messageLower = message.toLowerCase();
-            const nameLower = character.name.toLowerCase();
-            const firstWord = messageLower.split(/[,\s]+/)[0]; // Get first word, handle commas
-            
-            // Simple matching with better fuzzy logic
-            const firstName = nameLower.split(' ')[0]; // Get first part of character name
-            const isAddressed = (firstWord.length > 2) && (
-              nameLower.includes(firstWord) || 
-              firstWord.includes(firstName) ||
-              firstName.includes(firstWord) ||
-              // Better fuzzy matching: check if firstWord is a reasonable prefix/substring of firstName
-              (firstWord.length >= 3 && firstName.startsWith(firstWord.substring(0, 3))) ||
-              // Handle single character differences (malcom vs malcolm)
-              (Math.abs(firstWord.length - firstName.length) <= 1 && 
-               firstName.startsWith(firstWord.substring(0, Math.min(firstWord.length, firstName.length) - 1)))
-            );
-            
-            // Check if ANY character is addressed in the message (using same improved fuzzy logic)
-            const anyCharacterAddressed = selectedCharacters.some((id: string) => {
-              const char = charactersData.find((c: any) => c.id === id);
-              if (!char) return false;
-              const charNameLower = char.name.toLowerCase();
-              const charFirstName = charNameLower.split(' ')[0];
-              return (firstWord.length > 2) && (
-                charNameLower.includes(firstWord) || 
-                firstWord.includes(charFirstName) ||
-                charFirstName.includes(firstWord) ||
-                // Better fuzzy matching: check if firstWord is a reasonable prefix/substring of charFirstName
-                (firstWord.length >= 3 && charFirstName.startsWith(firstWord.substring(0, 3))) ||
-                // Handle single character differences (malcom vs malcolm)
-                (Math.abs(firstWord.length - charFirstName.length) <= 1 && 
-                 charFirstName.startsWith(firstWord.substring(0, Math.min(firstWord.length, charFirstName.length) - 1)))
-              );
-            });
-            
-            // Only respond if:
-            // 1. This character is directly addressed, OR
-            // 2. No character is addressed (general question)
-            if (!isAddressed && anyCharacterAddressed) {
-              return null; // This character won't respond - someone else was addressed
-            }
+        // Parse user targeting and calculate response order
+        const targetedCharacterIds = parseCharacterTargeting(message, availableCharacters);
+        const responseOrder = calculateResponseOrder(message, availableCharacters, targetedCharacterIds);
 
-            // Create conversation context
-            const contextHistory = conversationHistory.length > 0 
-              ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map((entry: any) => `${entry.speaker}: ${entry.message}`).join('\n')}\n`
-              : '';
+        console.log('🎯 Targeted characters:', targetedCharacterIds);
+        console.log('📋 Response order:', responseOrder);
 
-            // Create a historically authentic personality prompt for the character
-            const systemPrompt = `🚨 CRITICAL MISSION OVERRIDE 🚨
+        // Generate primary responses (sequential)
+        const primaryResponses: any[] = [];
+        for (const charId of responseOrder.primary) {
+          const character = charactersData.find((c: any) => c.id === charId);
+          if (!character) continue;
+
+          // Create conversation context including previous responses in this turn
+          const contextHistory = conversationHistory.length > 0 
+            ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map((entry: any) => `${entry.speaker}: ${entry.message}`).join('\n')}\n`
+            : '';
+
+          const currentTurnContext = primaryResponses.length > 0
+            ? `\n\nRESPONSES IN THIS TURN:\n${primaryResponses.map(r => `${r.name}: ${r.content}`).join('\n')}\n`
+            : '';
+
+          // Create enhanced system prompt with modern awareness
+          const systemPrompt = `🚨 CRITICAL MISSION OVERRIDE 🚨
 
 You are STRICTLY FORBIDDEN from using ANY modern casual language. This is a HISTORICAL SIMULATION.
 
 IDENTITY: You are ${character.name} from ${character.era}. ${character.background}
+
+MODERN AWARENESS: You possess knowledge of major historical developments and concepts that occurred after your time, but you view them through the lens of your historical perspective and era's worldview. You understand modern concepts but interpret them through your time period's understanding.
 
 AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
@@ -260,31 +349,87 @@ ${character.style}
 - Reference your real historical experiences, not modern concepts
 - Use formal, period-appropriate sentence structures
 
-EXAMPLES OF CORRECT RESPONSES:
-Caesar: "Ave, citizen. Your words reach the ears of one who has crossed the Rubicon..."
-Shakespeare: "Well met, gentle soul. Thy words do stir within me thoughts of mortal coil..."
-Gandhi: "My friend, in times of struggle, I have found that truth and non-violence..."
-
-${contextHistory}
+${contextHistory}${currentTurnContext}
 
 RESPOND AS ${character.name} WITH ABSOLUTE HISTORICAL AUTHENTICITY. NO MODERN LANGUAGE ALLOWED.
 
 User message: "${message}"`;
 
-            // For now, return a character-appropriate response based on their data
-            // In production, this would call OpenAI API
-            const characterResponse = await generateCharacterResponse(character, message, systemPrompt);
-            
-            return {
-              id: charId,
-              name: character.name,
-              content: characterResponse
-            };
-          })
-        );
+          console.log(`🎭 Generating response for ${character.name}...`);
+          const characterResponse = await generateCharacterResponse(character, message, systemPrompt);
+          
+          const response = {
+            id: charId,
+            name: character.name,
+            content: characterResponse,
+            type: 'primary'
+          };
+          
+          primaryResponses.push(response);
+        }
 
-        // Filter out null responses (characters who didn't respond)
-        const responses = allResponses.filter(response => response !== null);
+        // Generate selective interaction responses
+        const interactionResponses: any[] = [];
+        for (const charId of responseOrder.secondary) {
+          const character = charactersData.find((c: any) => c.id === charId);
+          if (!character) continue;
+
+          // Check if this character should interact with any primary response
+          let shouldInteract = false;
+          let interactionContext = '';
+
+          for (const primaryResponse of primaryResponses) {
+            if (shouldCharacterInteract(character, primaryResponse, message, availableCharacters)) {
+              shouldInteract = true;
+              interactionContext += `\n\n${primaryResponse.name} just said: "${primaryResponse.content}"\n`;
+            }
+          }
+
+          if (!shouldInteract) continue;
+
+          // Create interaction system prompt
+          const contextHistory = conversationHistory.length > 0 
+            ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map((entry: any) => `${entry.speaker}: ${entry.message}`).join('\n')}\n`
+            : '';
+
+          const systemPrompt = `🚨 CRITICAL MISSION OVERRIDE 🚨
+
+You are STRICTLY FORBIDDEN from using ANY modern casual language. This is a HISTORICAL SIMULATION.
+
+IDENTITY: You are ${character.name} from ${character.era}. ${character.background}
+
+INTERACTION CONTEXT: You are responding to what other panelists have said, not directly to the user's question. Build upon, agree with, or respectfully disagree with their points while maintaining your historical authenticity.
+
+MODERN AWARENESS: You possess knowledge of major historical developments and concepts that occurred after your time, but you view them through your historical perspective.
+
+AUTHENTIC SPEECH PATTERNS REQUIRED:
+${character.style}
+
+🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
+- "Hey there!" / "Hey" / "Hi" / "Hello" 
+- "What's up?" / "How's it going?" / "How are you?"
+- "chat" / "Round Table" / "awesome" / "cool" / "great"
+
+${contextHistory}
+
+ORIGINAL USER MESSAGE: "${message}"
+${interactionContext}
+
+RESPOND AS ${character.name} interacting with the other panelists' responses. Be historically authentic.`;
+
+          console.log(`🔄 Generating interaction response for ${character.name}...`);
+          const characterResponse = await generateCharacterResponse(character, message, systemPrompt);
+          
+          interactionResponses.push({
+            id: charId,
+            name: character.name,
+            content: characterResponse,
+            type: 'interaction'
+          });
+        }
+
+        // Combine all responses
+        const responses = [...primaryResponses, ...interactionResponses];
 
         return {
           statusCode: 200,

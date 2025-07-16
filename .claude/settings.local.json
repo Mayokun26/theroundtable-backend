@@ -30,7 +30,8 @@
       "Bash(powershell:*)",
       "Bash(dir lambda.zip)",
       "Bash(zip:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

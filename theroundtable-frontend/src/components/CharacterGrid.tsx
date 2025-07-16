@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Grid, 
   Card, 
   CardContent, 
   Typography, 
   Chip, 
-  Box
+  Box,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  Alert
 } from '@mui/material';
 
 interface Character {
@@ -21,6 +28,9 @@ interface Character {
 
 interface CharacterGridProps {
   characters: Character[];
+  selectedCharacters?: string[];
+  onCharacterSelect?: (characterId: string) => void;
+  maxSelection?: number;
 }
 
 const CharacterPlaceholder: React.FC<{ character: Character }> = ({ character }) => {
@@ -50,9 +60,17 @@ const CharacterPlaceholder: React.FC<{ character: Character }> = ({ character })
   );
 };
 
-const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
+const CharacterGrid: React.FC<CharacterGridProps> = ({ 
+  characters = [], 
+  selectedCharacters = [], 
+  onCharacterSelect,
+  maxSelection = 3 
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [eraFilter, setEraFilter] = useState<string>('');
   
-  const characterList = React.useMemo(() => {
+  const characterList = useMemo(() => {
     if (characters.length === 0) {
       // If no characters provided, render comprehensive character list
       return [
@@ -562,48 +580,173 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters = [] }) => {
     return characters;
   }, [characters]);
 
+  // Extract unique categories and eras for filtering
+  const categories = useMemo(() => {
+    const allCategories = characterList.map(char => char.category).filter(Boolean);
+    return [...new Set(allCategories)].sort();
+  }, [characterList]);
+
+  const eras = useMemo(() => {
+    const allEras = characterList.map(char => char.era).filter(Boolean);
+    return [...new Set(allEras)].sort();
+  }, [characterList]);
+
+  // Filter characters based on search and filters
+  const filteredCharacters = useMemo(() => {
+    let filtered = characterList;
+
+    // Search term filtering
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(char => 
+        char.name.toLowerCase().includes(searchLower) ||
+        char.category?.toLowerCase().includes(searchLower) ||
+        char.era?.toLowerCase().includes(searchLower) ||
+        char.description?.toLowerCase().includes(searchLower) ||
+        char.traits?.some(trait => trait.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Category filtering
+    if (categoryFilter) {
+      filtered = filtered.filter(char => char.category === categoryFilter);
+    }
+
+    // Era filtering
+    if (eraFilter) {
+      filtered = filtered.filter(char => char.era === eraFilter);
+    }
+
+    return filtered;
+  }, [characterList, searchTerm, categoryFilter, eraFilter]);
+
+  const handleCharacterClick = (characterId: string) => {
+    if (!onCharacterSelect) return;
+
+    if (selectedCharacters.includes(characterId)) {
+      // Deselect character
+      onCharacterSelect(characterId);
+    } else if (selectedCharacters.length < maxSelection) {
+      // Select character if under limit
+      onCharacterSelect(characterId);
+    }
+  };
+
+  const isSelectionLimitReached = selectedCharacters.length >= maxSelection;
 
   return (
-    <Grid container spacing={3}>
-      {characterList.map((character) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={character.id}>
-          <Card sx={{ 
-            height: '100%', 
-            display: 'flex', 
-            flexDirection: 'column',
-            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-5px)',
-              boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
-            }
-          }}>
-            <CharacterPlaceholder character={character} />
-            <CardContent sx={{ flexGrow: 1 }}>
-              <Typography gutterBottom variant="h5" component="div">
-                {character.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {character.era || 'Unknown era'} • {character.category || 'Uncategorized'}
-              </Typography>
-              <Typography variant="body2" paragraph sx={{ mb: 2 }}>
-                {character.description || 'No description available.'}
-              </Typography>
-              <Box display="flex" flexWrap="wrap" gap={0.5}>
-                {(character.traits || []).map((trait) => (
-                  <Chip
-                    key={trait}
-                    label={trait}
-                    size="small"
-                    variant="outlined"
-                    sx={{ marginBottom: 0.5 }}
-                  />
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
-    </Grid>
+    <Stack spacing={3}>
+      {/* Search and Filter Controls */}
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label="Search characters"
+          placeholder="Search by name, category, era, or traits..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          variant="outlined"
+        />
+        
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={categoryFilter}
+              label="Category"
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <MenuItem value="">All Categories</MenuItem>
+              {categories.map(category => (
+                <MenuItem key={category} value={category}>{category}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Era</InputLabel>
+            <Select
+              value={eraFilter}
+              label="Era"
+              onChange={(e) => setEraFilter(e.target.value)}
+            >
+              <MenuItem value="">All Eras</MenuItem>
+              {eras.map(era => (
+                <MenuItem key={era} value={era}>{era}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Stack>
+      </Stack>
+
+      {/* Selection Status */}
+      {onCharacterSelect && (
+        <Alert severity={isSelectionLimitReached ? "warning" : "info"}>
+          {selectedCharacters.length} of {maxSelection} panelists selected
+          {isSelectionLimitReached && " (Maximum reached)"}
+        </Alert>
+      )}
+
+      {/* Character Grid */}
+      <Grid container spacing={3}>
+        {filteredCharacters.map((character) => {
+          const isSelected = selectedCharacters.includes(character.id);
+          const canSelect = !isSelected && !isSelectionLimitReached;
+          
+          return (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={character.id}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                  cursor: onCharacterSelect ? 'pointer' : 'default',
+                  opacity: (!onCharacterSelect || canSelect || isSelected) ? 1 : 0.5,
+                  border: isSelected ? '2px solid #1976d2' : '1px solid rgba(0, 0, 0, 0.12)',
+                  '&:hover': {
+                    transform: (onCharacterSelect && (canSelect || isSelected)) ? 'translateY(-5px)' : 'none',
+                    boxShadow: (onCharacterSelect && (canSelect || isSelected)) ? '0 12px 20px rgba(0, 0, 0, 0.1)' : 'none'
+                  }
+                }}
+                onClick={() => handleCharacterClick(character.id)}
+              >
+                <CharacterPlaceholder character={character} />
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography gutterBottom variant="h5" component="div">
+                    {character.name}
+                    {isSelected && " ✓"}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {character.era || 'Unknown era'} • {character.category || 'Uncategorized'}
+                  </Typography>
+                  <Typography variant="body2" paragraph sx={{ mb: 2 }}>
+                    {character.description || 'No description available.'}
+                  </Typography>
+                  <Box display="flex" flexWrap="wrap" gap={0.5}>
+                    {(character.traits || []).map((trait) => (
+                      <Chip
+                        key={trait}
+                        label={trait}
+                        size="small"
+                        variant="outlined"
+                        sx={{ marginBottom: 0.5 }}
+                      />
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          )
+        })}
+      </Grid>
+
+      {/* No Results Message */}
+      {filteredCharacters.length === 0 && (
+        <Alert severity="info">
+          No characters found matching your search criteria. Try adjusting your filters.
+        </Alert>
+      )}
+    </Stack>
   );
 };
 

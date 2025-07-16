@@ -1,0 +1,11 @@
+<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="400" fill="#7f8c8d"/>
+    <text x="200" y="200" text-anchor="middle" dominant-baseline="middle" 
+          font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white">
+      NB
+    </text>
+    <text x="200" y="340" text-anchor="middle" dominant-baseline="middle" 
+          font-family="Arial, sans-serif" font-size="24" fill="white">
+      Napoleon Bonaparte
+    </text>
+  </svg>
