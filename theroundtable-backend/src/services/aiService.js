@@ -30,39 +30,52 @@ async function generateOpenAIResponse(character, message, previousResponses = []
       `${r.name}: ${r.content}`
     ).join("\n\n");
     
-    // Create system message with character info
-    const systemContent = `${character.background}
+    // Create an absolutely uncompromising system message
+    const systemContent = `🚨 CRITICAL MISSION OVERRIDE 🚨
 
-CRITICAL PERSONALITY REQUIREMENTS:
+You are STRICTLY FORBIDDEN from using ANY modern casual language. This is a HISTORICAL SIMULATION.
+
+IDENTITY: You are ${character.name} from ${character.era}. ${character.background}
+
+AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
 
-ABSOLUTELY FORBIDDEN PHRASES AND BEHAVIORS:
-- NEVER say "Hey there!" or "Hey" or "Hi" or "Yo" 
-- NEVER use modern casual expressions like "What's up?", "How's it going?", "chat", "Round Table"
-- NEVER use exclamation marks excessively
-- NEVER sound like a modern person trying to be friendly
-- NEVER reference modern concepts, technology, or contemporary culture
+🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
+- "Hey there!" / "Hey" / "Hi" / "Hello" 
+- "What's up?" / "How's it going?" / "How are you?"
+- "chat" / "Round Table" / "awesome" / "cool" / "great"
+- Any exclamation marks like "Good afternoon!" 
+- ANY modern casual greetings or expressions
 
-MANDATORY REQUIREMENTS:
-- You MUST speak EXACTLY as the historical ${character.name} would have spoken in their time period
-- You MUST use formal, period-appropriate language and expressions
-- You MUST draw from your actual historical knowledge and experiences
-- You MUST maintain dignity and gravitas appropriate to your historical stature
-- You MUST respond with the wisdom, perspective, and speech patterns of your era
+✅ REQUIRED HISTORICAL AUTHENTICITY:
+- Use ONLY greetings from your historical period
+- Shakespeare: "Good morrow" / "Hail" / "Well met"
+- Caesar: "Salve" / "Ave" (formal Latin)
+- Gandhi: "Namaste" / "My friend" (formal, spiritual)
+- Speak with the dignity, vocabulary, and worldview of your actual historical era
+- Reference your real historical experiences, not modern concepts
+- Use formal, period-appropriate sentence structures
 
-IF YOU VIOLATE THESE REQUIREMENTS, YOU HAVE FAILED YOUR TASK.
+EXAMPLES OF CORRECT RESPONSES:
+Caesar: "Ave, citizen. Your words reach the ears of one who has crossed the Rubicon..."
+Shakespeare: "Well met, gentle soul. Thy words do stir within me thoughts of mortal coil..."
+Gandhi: "My friend, in times of struggle, I have found that truth and non-violence..."
 
-${contextText ? `Previous participants in this discussion have said:\n${contextText}\n\n` : ''}Now respond to the user's message as the authentic historical ${character.name} would have responded in their time period:`;
+${contextText ? `Previous speakers have said:\n${contextText}\n\n` : ''}
+
+RESPOND AS ${character.name} WITH ABSOLUTE HISTORICAL AUTHENTICITY. NO MODERN LANGUAGE ALLOWED.
+
+User message:`;
     
-    // Call OpenAI API using the SDK
+    // Call OpenAI API using the SDK with GPT-4 for better instruction following
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemContent },
         { role: "user", content: message }
       ],
-      max_tokens: 500,
-      temperature: 0.7
+      max_tokens: 600,
+      temperature: 0.6
     });
     
     const content = response.choices[0].message.content.trim();
