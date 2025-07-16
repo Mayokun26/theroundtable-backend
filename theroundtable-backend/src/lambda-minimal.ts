@@ -161,7 +161,7 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 150, // Much shorter for punchy responses
+      max_tokens: isExpansionRequest && isDirectlyAddressed ? 300 : 150, // More tokens for expansion requests
       temperature: 0.7
     });
 
@@ -340,6 +340,16 @@ export const handler = async (
             ? `\n\nRESPONSES IN THIS TURN:\n${primaryResponses.map(r => `${r.name}: ${r.content}`).join('\n')}\n`
             : '';
 
+          // Find character's previous responses for context
+          const myPreviousResponses = conversationHistory.filter((entry: any) => entry.speaker === character.name);
+          const myLastResponse = myPreviousResponses.length > 0 ? myPreviousResponses[myPreviousResponses.length - 1].message : '';
+          
+          // Check if user is asking for expansion
+          const isExpansionRequest = /expand|elaborate|explain|tell me more|what do you mean|how so|why|continue/i.test(message);
+          
+          // Detect if user is addressing this character specifically
+          const isDirectlyAddressed = parseCharacterTargeting(message, [character]).length > 0;
+
           // Create enhanced system prompt with modern awareness
           const systemPrompt = `🚨 CRITICAL MISSION OVERRIDE 🚨
 
@@ -353,11 +363,22 @@ AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
 
 📝 RESPONSE FORMATTING REQUIREMENTS:
-- MAXIMUM 2-3 sentences - be punchy and memorable like ChatGPT
+${isExpansionRequest && isDirectlyAddressed 
+  ? `- EXPANSION REQUEST: Give 4-6 sentences expanding on your previous response
+- Build directly on what you said before: "${myLastResponse}"
+- Go deeper into your reasoning and philosophy
+- Use examples, metaphors, or analogies to clarify
+- Be more detailed and explanatory than usual`
+  : `- MAXIMUM 2-3 sentences - be punchy and memorable like ChatGPT
 - Start with a striking quote or key insight
 - No lengthy explanations - every word must count
 - Be conversational yet profound
-- End with impact, not rambling
+- End with impact, not rambling`}
+
+${myLastResponse ? `🔄 CONTEXTUAL AWARENESS: You previously said: "${myLastResponse}"
+- Build on your previous thoughts if relevant
+- Show consistency with your character's established views
+- Reference earlier conversation if appropriate` : ''}
 
 🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
 - "Hey there!" / "Hey" / "Hi" / "Hello" 
@@ -377,6 +398,12 @@ ${character.style}
 - Use formal, period-appropriate sentence structures
 
 ${contextHistory}${currentTurnContext}
+
+${isExpansionRequest && isDirectlyAddressed && myLastResponse 
+  ? `🎯 EXPANSION REQUEST: The user is asking you to expand on your previous response.
+Your previous response was: "${myLastResponse}"
+Build on this and go deeper into your reasoning.`
+  : `🎯 CONTEXT: Respond as ${character.name} in the context of this conversation.`}
 
 RESPOND AS ${character.name} WITH ABSOLUTE HISTORICAL AUTHENTICITY. NO MODERN LANGUAGE ALLOWED.
 
