@@ -106,7 +106,7 @@ function shouldCharacterInteract(
 
 // Function to check historical relationships (basic version)
 function checkHistoricalConnection(name1: string, name2: string): boolean {
-  const relationships = {
+  const relationships: { [key: string]: string[] } = {
     'Socrates': ['Plato'],
     'Plato': ['Socrates', 'Aristotle'],
     'Aristotle': ['Plato', 'Alexander the Great'],
