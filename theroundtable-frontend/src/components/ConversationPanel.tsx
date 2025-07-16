@@ -12,6 +12,7 @@ interface Message {
   };
   timestamp: string;
   isTyping?: boolean;
+  enableTyping?: boolean;
 }
 
 interface ConversationPanelProps {
