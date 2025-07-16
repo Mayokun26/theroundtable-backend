@@ -108,17 +108,20 @@ function shouldCharacterInteract(
                                (character.category === 'Philosopher' && (messageLower.includes('truth') || messageLower.includes('meaning'))) ||
                                (character.category === 'Scientist' && (messageLower.includes('evidence') || messageLower.includes('method')));
   
-  // Interaction scoring
+  // Interaction scoring - more aggressive
   let score = 0;
-  if (topicOverlap) score += 0.4;
-  if (eraProximity) score += 0.3;
-  if (hasHistoricalConnection) score += 0.6;
-  if (disagreementPotential) score += 0.5;
+  if (topicOverlap) score += 0.5;
+  if (eraProximity) score += 0.4;
+  if (hasHistoricalConnection) score += 0.7;
+  if (disagreementPotential) score += 0.6;
+  
+  // Base interaction chance - everyone should have some chance to interact
+  score += 0.2;
   
   // Random factor to add variety
-  score += Math.random() * 0.2;
+  score += Math.random() * 0.3;
   
-  return score > 0.6;
+  return score > 0.3; // Lower threshold for more interactions
 }
 
 // Function to check historical relationships (basic version)
@@ -158,7 +161,7 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 450, // Reduced for more concise responses
+      max_tokens: 150, // Much shorter for punchy responses
       temperature: 0.7
     });
 
@@ -350,11 +353,11 @@ AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
 
 📝 RESPONSE FORMATTING REQUIREMENTS:
-- Keep responses concise and readable (2-4 sentences maximum)
-- Use natural paragraph breaks for clarity
-- End sentences with periods, not exclamation marks
-- Focus on wisdom and insights, not lengthy explanations
-- Make each sentence meaningful and impactful
+- MAXIMUM 2-3 sentences - be punchy and memorable like ChatGPT
+- Start with a striking quote or key insight
+- No lengthy explanations - every word must count
+- Be conversational yet profound
+- End with impact, not rambling
 
 🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
 - "Hey there!" / "Hey" / "Hi" / "Hello" 
@@ -430,10 +433,10 @@ AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
 
 📝 RESPONSE FORMATTING REQUIREMENTS:
-- Keep responses brief and insightful (1-3 sentences maximum for interactions)
-- Use natural paragraph breaks for clarity
-- Focus on your unique perspective on what others have said
-- Make your contribution distinct and valuable
+- MAXIMUM 1-2 sentences for interactions - be sharp and direct
+- Challenge, agree, or build on what others said
+- Focus on your unique perspective
+- Make your contribution memorable and distinct
 
 🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
 - "Hey there!" / "Hey" / "Hi" / "Hello" 

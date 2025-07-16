@@ -237,7 +237,7 @@ const ConversationPage: React.FC = () => {
               sender: 'character',
               character: { id: resp.id || selectedCharacters[index % selectedCharacters.length], name: resp.name },
               timestamp: new Date().toISOString(),
-              enableTyping: true // Enable typing effect for ALL new responses
+              enableTyping: false // Disable typing effect until fixed
             };
             setMessages(prev => [...prev, characterResponse]);
             
@@ -245,7 +245,7 @@ const ConversationPage: React.FC = () => {
             if (index === sortedResponses.length - 1) {
               setSendingMessage(false);
             }
-          }, (index + 1) * 3000); // Even longer delays to prevent overlap
+          }, (index + 1) * 800); // Faster responses for better conversation flow
         });
       } else {
         throw new Error('No responses received');
