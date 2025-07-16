@@ -582,13 +582,13 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
 
   // Extract unique categories and eras for filtering
   const categories = useMemo(() => {
-    const allCategories = characterList.map(char => char.category).filter(Boolean);
-    return [...new Set(allCategories)].sort();
+    const allCategories = characterList.map(char => char.category).filter(Boolean) as string[];
+    return Array.from(new Set(allCategories)).sort();
   }, [characterList]);
 
   const eras = useMemo(() => {
-    const allEras = characterList.map(char => char.era).filter(Boolean);
-    return [...new Set(allEras)].sort();
+    const allEras = characterList.map(char => char.era).filter(Boolean) as string[];
+    return Array.from(new Set(allEras)).sort();
   }, [characterList]);
 
   // Filter characters based on search and filters
