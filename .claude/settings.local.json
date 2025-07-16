@@ -31,7 +31,11 @@
       "Bash(dir lambda.zip)",
       "Bash(zip:*)",
       "Bash(python3:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 180s npm run build)",
+      "Bash(npx next build:*)",
+      "Bash(tsc)"
     ],
     "deny": []
   }

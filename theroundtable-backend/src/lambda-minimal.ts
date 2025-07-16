@@ -7,7 +7,7 @@ function parseCharacterTargeting(message: string, characters: any[]): string[] {
   const targetedCharacters: string[] = [];
   
   // Extract first few words to check for character names
-  const words = messageLower.split(/[,\s]+/).slice(0, 5);
+  const words = messageLower.split(/[,\s]+/).slice(0, 8); // Increased to 8 words for better coverage
   
   for (const character of characters) {
     const nameLower = character.name.toLowerCase();
@@ -31,6 +31,23 @@ function parseCharacterTargeting(message: string, characters: any[]): string[] {
       
       return false;
     });
+    
+    // Additional check for multi-word names (like "Sun Tzu")
+    if (!isTargeted && nameParts.length > 1) {
+      const consecutiveWords = [];
+      for (let i = 0; i < words.length - 1; i++) {
+        consecutiveWords.push(words[i] + ' ' + words[i + 1]);
+      }
+      
+      const isConsecutiveMatch = consecutiveWords.some(phrase => 
+        nameLower.includes(phrase) || phrase.includes(nameLower)
+      );
+      
+      if (isConsecutiveMatch) {
+        targetedCharacters.push(character.id);
+        continue;
+      }
+    }
     
     if (isTargeted) {
       targetedCharacters.push(character.id);
@@ -141,8 +158,8 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 600,
-      temperature: 0.6
+      max_tokens: 450, // Reduced for more concise responses
+      temperature: 0.7
     });
 
     const response = await new Promise<any>((resolve, reject) => {
@@ -332,6 +349,13 @@ MODERN AWARENESS: You possess knowledge of major historical developments and con
 AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
 
+📝 RESPONSE FORMATTING REQUIREMENTS:
+- Keep responses concise and readable (2-4 sentences maximum)
+- Use natural paragraph breaks for clarity
+- End sentences with periods, not exclamation marks
+- Focus on wisdom and insights, not lengthy explanations
+- Make each sentence meaningful and impactful
+
 🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
 - "Hey there!" / "Hey" / "Hi" / "Hello" 
 - "What's up?" / "How's it going?" / "How are you?"
@@ -404,6 +428,12 @@ MODERN AWARENESS: You possess knowledge of major historical developments and con
 
 AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
+
+📝 RESPONSE FORMATTING REQUIREMENTS:
+- Keep responses brief and insightful (1-3 sentences maximum for interactions)
+- Use natural paragraph breaks for clarity
+- Focus on your unique perspective on what others have said
+- Make your contribution distinct and valuable
 
 🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
 - "Hey there!" / "Hey" / "Hi" / "Hello" 

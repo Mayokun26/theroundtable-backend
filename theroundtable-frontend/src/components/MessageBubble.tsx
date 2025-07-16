@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 interface MessageProps {
@@ -9,6 +9,8 @@ interface MessageProps {
     name: string;
   };
   timestamp: string;
+  enableTyping?: boolean;
+  typingSpeed?: number;
 }
 
 const MessageContainer = styled.div<{ $isUser: boolean }>`
@@ -43,7 +45,45 @@ const MessageTime = styled.div`
   align-self: flex-end;
 `;
 
-const MessageBubbleComponent: React.FC<MessageProps> = ({ content, sender, character, timestamp }) => {
+const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 25 }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timer = setTimeout(() => {
+        setDisplayedText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }, speed);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, text, speed]);
+
+  return <span>{displayedText}{currentIndex < text.length && <span className="typing-cursor">|</span>}</span>;
+};
+
+const TypingStyles = styled.div`
+  .typing-cursor {
+    animation: blink 1s infinite;
+    font-weight: bold;
+    color: #1976d2;
+  }
+  
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+`;
+
+const MessageBubbleComponent: React.FC<MessageProps> = ({ 
+  content, 
+  sender, 
+  character, 
+  timestamp, 
+  enableTyping = false,
+  typingSpeed = 25 
+}) => {
   const isUser = sender === 'user';
   const senderName = isUser ? 'You' : character?.name || 'Unknown';
   
@@ -57,12 +97,36 @@ const MessageBubbleComponent: React.FC<MessageProps> = ({ content, sender, chara
     }
   };
 
+  // Break content into sentences for better readability and typing effect
+  const formatContent = (text: string) => {
+    if (enableTyping && !isUser) {
+      // For typing effect, show entire text with typing animation
+      return (
+        <div style={{ lineHeight: '1.5' }}>
+          <TypingText text={text} speed={typingSpeed} />
+        </div>
+      );
+    } else {
+      // For normal display, break into paragraphs
+      const paragraphs = text.split('\n').filter(p => p.trim());
+      return paragraphs.map((paragraph, index) => (
+        <p key={index} style={{ margin: '0 0 8px 0', lineHeight: '1.5' }}>
+          {paragraph}
+        </p>
+      ));
+    }
+  };
+
   return (
-    <MessageContainer $isUser={isUser}>
-      <MessageSender $isUser={isUser}>{senderName}</MessageSender>
-      <MessageBubble $isUser={isUser}>{content}</MessageBubble>
-      <MessageTime>{formatTime(timestamp)}</MessageTime>
-    </MessageContainer>
+    <TypingStyles>
+      <MessageContainer $isUser={isUser}>
+        <MessageSender $isUser={isUser}>{senderName}</MessageSender>
+        <MessageBubble $isUser={isUser}>
+          {formatContent(content)}
+        </MessageBubble>
+        <MessageTime>{formatTime(timestamp)}</MessageTime>
+      </MessageContainer>
+    </TypingStyles>
   );
 };
 
