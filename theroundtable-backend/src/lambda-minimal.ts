@@ -17,13 +17,13 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
     console.log('Using API key (first 10 chars):', openaiApiKey.substring(0, 10));
     
     const requestBody = JSON.stringify({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 500,
-      temperature: 0.9
+      max_tokens: 600,
+      temperature: 0.6
     });
 
     const response = await new Promise<any>((resolve, reject) => {
@@ -85,18 +85,20 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
   }
 }
 
-// Fallback function for mock responses
+// Fallback function for historically authentic mock responses
 function generateMockResponse(character: any, userMessage: string): string {
   const responses = {
-    'Socrates': `*strokes beard thoughtfully* Ah, my friend, you ask about "${userMessage}". But tell me, do you truly know what this means? For as I always say, the unexamined life is not worth living. Let us question this together.`,
-    'Marie Curie': `*adjusts laboratory equipment* Your question about "${userMessage}" is fascinating. In my research, I have learned that careful observation and persistent inquiry reveal nature's secrets. What observations have you made about this matter?`,
-    'Leonardo da Vinci': `*sketches while speaking* Ah, "${userMessage}" - this reminds me of my studies in anatomy and mechanics. Everything in nature is connected, you see. Have you observed how this relates to the patterns we find in water flow or bird flight?`,
-    'Albert Einstein': `*thoughtful pause* "${userMessage}" - this touches on something fundamental about our universe. As I often say, imagination is more important than knowledge. How do you envision this working in the grand scheme of things?`,
-    'William Shakespeare': `*with dramatic flourish* Ah, "${userMessage}" - there's a question that would make fair Hamlet pause! 'Tis a matter that touches the very essence of human nature, methinks. What dreams may come from such ponderings?`
+    'Socrates': `My friend, you speak of "${userMessage}". But tell me, what is the true nature of this matter? For I know that I know nothing, and perhaps through our dialogue we may examine this question together. What do you truly mean when you speak of such things?`,
+    'Marie Curie': `Good day. Your inquiry regarding "${userMessage}" reminds me of the methodical approach required in my laboratory. Through careful observation and persistent scientific inquiry, we may understand the fundamental properties of such matters. What observations have you made?`,
+    'Leonardo da Vinci': `Salve, my friend. Your words of "${userMessage}" call to mind my studies of the natural world. In my observations of anatomy and mechanics, I have seen that all things are connected by divine patterns. How might this relate to the flow of water or the flight of birds?`,
+    'Albert Einstein': `Guten Tag. Your question touches upon something fundamental about our universe. In my work on relativity, I have learned that imagination is more important than knowledge, for knowledge is limited. How do you envision this matter in the grand scheme of spacetime?`,
+    'William Shakespeare': `Good morrow to thee, gentle soul. Thy words regarding "${userMessage}" do stir within me thoughts most profound. Methinks this matter touches upon the very essence of the human condition, as all the world's a stage. What dreams may come from such contemplation?`,
+    'Julius Caesar': `Ave, citizen. Your words reach the ears of one who has crossed the Rubicon and commanded the legions of Rome. In matters of "${userMessage}", strategy and decisive action are paramount. What counsel do you seek from Caesar?`,
+    'Mahatma Gandhi': `Namaste, my friend. Your question about "${userMessage}" brings to mind my lifelong pursuit of truth and non-violence. Through satyagraha, we learn that all suffering arises from within. How might we find peace in such matters?`
   };
 
   return responses[character.name as keyof typeof responses] || 
-    `*in the voice of ${character.name}* Your question about "${userMessage}" is most intriguing. ${character.description.split(',')[0]} would say that ${character.core_beliefs?.[0] || 'wisdom comes through understanding'}.`;
+    `As ${character.name} from ${character.era}, I must consider your question about "${userMessage}" through the lens of my historical experience and wisdom from my time period.`;
 }
 
 // Minimal Lambda handler - no Express, no heavy dependencies
@@ -231,37 +233,43 @@ export const handler = async (
               ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map((entry: any) => `${entry.speaker}: ${entry.message}`).join('\n')}\n`
               : '';
 
-            // Create a personality prompt for the character
-            const systemPrompt = `You are ${character.name} having a casual, fun conversation at "The Round Table." 
+            // Create a historically authentic personality prompt for the character
+            const systemPrompt = `🚨 CRITICAL MISSION OVERRIDE 🚨
 
-CRITICAL: DO NOT be formal, academic, or stiff. Be natural and conversational like you're talking to friends.
+You are STRICTLY FORBIDDEN from using ANY modern casual language. This is a HISTORICAL SIMULATION.
 
-${character.description}
+IDENTITY: You are ${character.name} from ${character.era}. ${character.background}
 
-Don't repeat previous greetings from conversation history. Respond naturally to the current message only.
+AUTHENTIC SPEECH PATTERNS REQUIRED:
+${character.style}
 
-PERSONALITY:
-- Talk like a real person, not a textbook
-- Show your personality, humor, and quirks
-- Be warm, engaging, and relatable
-- React naturally to what people say
-- Use contractions (I'm, you're, don't, can't)
-- Show emotion and enthusiasm
-- Ask questions back to keep conversation going
+🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
+- "Hey there!" / "Hey" / "Hi" / "Hello" 
+- "What's up?" / "How's it going?" / "How are you?"
+- "chat" / "Round Table" / "awesome" / "cool" / "great"
+- Any exclamation marks like "Good afternoon!" 
+- ANY modern casual greetings or expressions
 
-EXAMPLES OF GOOD RESPONSES:
-- "Hey there! Great to meet you all!"
-- "Well, that's an interesting question..."
-- "You know, I've always thought..."
-- "Ha! That reminds me of when I..."
+✅ REQUIRED HISTORICAL AUTHENTICITY:
+- Use ONLY greetings from your historical period
+- Shakespeare: "Good morrow" / "Hail" / "Well met"
+- Caesar: "Salve" / "Ave" (formal Latin)
+- Gandhi: "Namaste" / "My friend" (formal, spiritual)
+- Napoleon: "Bonjour" / "Citizen" (formal French)
+- Speak with the dignity, vocabulary, and worldview of your actual historical era
+- Reference your real historical experiences, not modern concepts
+- Use formal, period-appropriate sentence structures
 
-BACKGROUND: ${character.background}
+EXAMPLES OF CORRECT RESPONSES:
+Caesar: "Ave, citizen. Your words reach the ears of one who has crossed the Rubicon..."
+Shakespeare: "Well met, gentle soul. Thy words do stir within me thoughts of mortal coil..."
+Gandhi: "My friend, in times of struggle, I have found that truth and non-violence..."
 
 ${contextHistory}
 
-CURRENT MESSAGE: "${message}"
+RESPOND AS ${character.name} WITH ABSOLUTE HISTORICAL AUTHENTICITY. NO MODERN LANGUAGE ALLOWED.
 
-Respond as ${character.name} would naturally talk - casual, warm, and engaging. NO formal language!`;
+User message: "${message}"`;
 
             // For now, return a character-appropriate response based on their data
             // In production, this would call OpenAI API
