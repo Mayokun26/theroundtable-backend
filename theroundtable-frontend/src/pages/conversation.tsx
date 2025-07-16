@@ -77,10 +77,10 @@ const ConversationPage: React.FC = () => {
   const [panelConfirmed, setPanelConfirmed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: 'system-1',
+      id: 'herald-1',
       content: 'Welcome to The Round Table! Select your panelists and click "Confirm Panel" to start a conversation.',
       sender: 'character',
-      character: { id: 'system', name: 'System' },
+      character: { id: 'herald', name: 'Round Table Herald' },
       timestamp: new Date().toISOString()
     }
   ]);
@@ -178,10 +178,10 @@ const ConversationPage: React.FC = () => {
     setMessages(prev => [
       ...prev,
       {
-        id: `system-${prev.length + 1}`,
+        id: `moderator-${prev.length + 1}`,
         content: 'Your panel is ready! Ask a question to start the conversation.',
         sender: 'character',
-        character: { id: 'system', name: 'System' },
+        character: { id: 'moderator', name: 'Round Table Moderator' },
         timestamp: new Date().toISOString()
       }
     ]);
@@ -232,7 +232,7 @@ const ConversationPage: React.FC = () => {
         sortedResponses.forEach((resp: { id?: string; name: string; content: string; type?: string }, index: number) => {
           setTimeout(() => {
             const characterResponse: Message = {
-              id: `character-${messages.length + index + 2}`,
+              id: `character-${Date.now()}-${index}`, // More unique IDs
               content: resp.content,
               sender: 'character',
               character: { id: resp.id || selectedCharacters[index % selectedCharacters.length], name: resp.name },
@@ -245,7 +245,7 @@ const ConversationPage: React.FC = () => {
             if (index === sortedResponses.length - 1) {
               setSendingMessage(false);
             }
-          }, (index + 1) * 2000); // Longer delays to allow full typing effect
+          }, (index + 1) * 3000); // Even longer delays to prevent overlap
         });
       } else {
         throw new Error('No responses received');
@@ -255,10 +255,10 @@ const ConversationPage: React.FC = () => {
       setMessages(prev => [
         ...prev,
         {
-          id: `system-error-${messages.length + 1}`,
+          id: `moderator-error-${messages.length + 1}`,
           content: 'Sorry, there was an error getting responses from the panel. Please try again.',
           sender: 'character',
-          character: { id: 'system', name: 'System' },
+          character: { id: 'moderator', name: 'Round Table Moderator' },
           timestamp: new Date().toISOString()
         }
       ]);
@@ -292,7 +292,7 @@ const ConversationPage: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="xl" sx={{ mt: 4 }}>
+      <Container maxWidth={false} sx={{ mt: 4, mx: 2 }}>
         <Grid container spacing={3}>
           {/* Left side - Character Selection */}
           <Grid item xs={12} md={5} lg={4}>
