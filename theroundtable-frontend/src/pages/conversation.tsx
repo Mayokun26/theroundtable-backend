@@ -40,6 +40,7 @@ interface Message {
     name: string;
   };
   timestamp: string;
+  enableTyping?: boolean;
 }
 
 const CharacterAvatar: React.FC<{ character: Character }> = ({ character }) => {
@@ -235,7 +236,8 @@ const ConversationPage: React.FC = () => {
               content: resp.content,
               sender: 'character',
               character: { id: resp.id || selectedCharacters[index % selectedCharacters.length], name: resp.name },
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              enableTyping: true // Enable typing effect for ALL new responses
             };
             setMessages(prev => [...prev, characterResponse]);
             
@@ -243,7 +245,7 @@ const ConversationPage: React.FC = () => {
             if (index === sortedResponses.length - 1) {
               setSendingMessage(false);
             }
-          }, (index + 1) * 1500); // 1.5 second delays between responses
+          }, (index + 1) * 1500); // Slightly longer delays for better typing effect
         });
       } else {
         throw new Error('No responses received');
@@ -317,6 +319,7 @@ const ConversationPage: React.FC = () => {
                   selectedCharacters={selectedCharacters}
                   onCharacterSelect={panelConfirmed ? undefined : handleCharacterSelect}
                   maxSelection={3}
+                  showSearch={true}
                 />
               </Box>
             </Box>

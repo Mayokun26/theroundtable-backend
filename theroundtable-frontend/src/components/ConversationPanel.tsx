@@ -11,6 +11,7 @@ interface Message {
     name: string;
   };
   timestamp: string;
+  isTyping?: boolean;
 }
 
 interface ConversationPanelProps {
@@ -103,6 +104,42 @@ const LoadingIndicator = styled.div`
   }
 `;
 
+// Typing effect component
+const TypingText: React.FC<{ text: string; speed?: number; onComplete?: () => void }> = ({ 
+  text, 
+  speed = 30, 
+  onComplete 
+}) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timer = setTimeout(() => {
+        setDisplayedText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }, speed);
+
+      return () => clearTimeout(timer);
+    } else if (onComplete) {
+      onComplete();
+    }
+  }, [currentIndex, text, speed, onComplete]);
+
+  return <span>{displayedText}<span className="cursor">|</span></span>;
+};
+
+const TypingWrapper = styled.div`
+  .cursor {
+    animation: blink 1s infinite;
+  }
+  
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+`;
+
 const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendMessage, loading }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -127,15 +164,24 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendM
     <Container>
       <Header>Round Table Conversation</Header>
       <MessagesContainer>
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            content={message.content}
-            sender={message.sender}
-            character={message.character}
-            timestamp={message.timestamp}
-          />
-        ))}
+        {messages.map((message, index) => {
+          // Enable typing effect for character messages that have enableTyping set
+          const shouldEnableTyping = message.sender === 'character' && 
+                                    message.enableTyping && 
+                                    !loading;
+          
+          return (
+            <MessageBubble
+              key={message.id}
+              content={message.content}
+              sender={message.sender}
+              character={message.character}
+              timestamp={message.timestamp}
+              enableTyping={shouldEnableTyping}
+              typingSpeed={25}
+            />
+          );
+        })}
         {loading && <LoadingIndicator>The panel is thinking</LoadingIndicator>}
         <div ref={messagesEndRef} />
       </MessagesContainer>

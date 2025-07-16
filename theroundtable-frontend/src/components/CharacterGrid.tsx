@@ -31,6 +31,7 @@ interface CharacterGridProps {
   selectedCharacters?: string[];
   onCharacterSelect?: (characterId: string) => void;
   maxSelection?: number;
+  showSearch?: boolean;
 }
 
 const CharacterPlaceholder: React.FC<{ character: Character }> = ({ character }) => {
@@ -64,7 +65,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   characters = [], 
   selectedCharacters = [], 
   onCharacterSelect,
-  maxSelection = 3 
+  maxSelection = 3,
+  showSearch = false 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
@@ -637,7 +639,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   return (
     <Stack spacing={3}>
       {/* Search and Filter Controls */}
-      <Stack spacing={2}>
+      {showSearch && (
+        <Stack spacing={2}>
         <TextField
           fullWidth
           label="Search characters"
@@ -677,6 +680,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
           </FormControl>
         </Stack>
       </Stack>
+      )}
 
       {/* Selection Status */}
       {onCharacterSelect && (
@@ -693,7 +697,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
           const canSelect = !isSelected && !isSelectionLimitReached;
           
           return (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={character.id}>
+            <Grid item xs={12} sm={6} md={4} key={character.id}>
               <Card 
                 sx={{ 
                   height: '100%', 
