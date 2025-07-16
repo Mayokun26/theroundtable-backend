@@ -161,7 +161,7 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: isExpansionRequest && isDirectlyAddressed ? 300 : 150, // More tokens for expansion requests
+      max_tokens: 200, // Fixed token count for now
       temperature: 0.7
     });
 
@@ -350,64 +350,29 @@ export const handler = async (
           // Detect if user is addressing this character specifically
           const isDirectlyAddressed = parseCharacterTargeting(message, [character]).length > 0;
 
-          // Create enhanced system prompt with modern awareness
-          const systemPrompt = `🚨 CRITICAL MISSION OVERRIDE 🚨
+          // Create focused system prompt
+          const systemPrompt = `You are ${character.name} from ${character.era}. ${character.background}
 
-You are STRICTLY FORBIDDEN from using ANY modern casual language. This is a HISTORICAL SIMULATION.
-
-IDENTITY: You are ${character.name} from ${character.era}. ${character.background}
-
-MODERN AWARENESS: You possess knowledge of major historical developments and concepts that occurred after your time, but you view them through the lens of your historical perspective and era's worldview. You understand modern concepts but interpret them through your time period's understanding.
-
-AUTHENTIC SPEECH PATTERNS REQUIRED:
 ${character.style}
 
-📝 RESPONSE FORMATTING REQUIREMENTS:
-${isExpansionRequest && isDirectlyAddressed 
-  ? `- EXPANSION REQUEST: Give 4-6 sentences expanding on your previous response
-- Build directly on what you said before: "${myLastResponse}"
-- Go deeper into your reasoning and philosophy
-- Use examples, metaphors, or analogies to clarify
-- Be more detailed and explanatory than usual`
-  : `- MAXIMUM 2-3 sentences - be punchy and memorable like ChatGPT
-- Start with a striking quote or key insight
-- No lengthy explanations - every word must count
-- Be conversational yet profound
-- End with impact, not rambling`}
+CRITICAL INSTRUCTIONS:
+- Answer the user's question directly and personally
+- Draw from your actual historical experiences and perspective  
+- Be engaging, memorable, and authentic to your character
+- Give 2-4 sentences that showcase your unique viewpoint
+- NO generic template responses - make it personal and specific
 
-${myLastResponse ? `🔄 CONTEXTUAL AWARENESS: You previously said: "${myLastResponse}"
-- Build on your previous thoughts if relevant
-- Show consistency with your character's established views
-- Reference earlier conversation if appropriate` : ''}
-
-🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
-- "Hey there!" / "Hey" / "Hi" / "Hello" 
-- "What's up?" / "How's it going?" / "How are you?"
-- "chat" / "Round Table" / "awesome" / "cool" / "great"
-- Any exclamation marks like "Good afternoon!" 
-- ANY modern casual greetings or expressions
-
-✅ REQUIRED HISTORICAL AUTHENTICITY:
-- Use ONLY greetings from your historical period
-- Shakespeare: "Good morrow" / "Hail" / "Well met"
-- Caesar: "Salve" / "Ave" (formal Latin)
-- Gandhi: "Namaste" / "My friend" (formal, spiritual)
-- Napoleon: "Bonjour" / "Citizen" (formal French)
-- Speak with the dignity, vocabulary, and worldview of your actual historical era
-- Reference your real historical experiences, not modern concepts
-- Use formal, period-appropriate sentence structures
+FORBIDDEN PHRASES:
+- "I must consider your question through the lens of..."
+- "As [Name] from [Era], I must..."
+- Any modern casual language
+- Generic template responses
 
 ${contextHistory}${currentTurnContext}
 
-${isExpansionRequest && isDirectlyAddressed && myLastResponse 
-  ? `🎯 EXPANSION REQUEST: The user is asking you to expand on your previous response.
-Your previous response was: "${myLastResponse}"
-Build on this and go deeper into your reasoning.`
-  : `🎯 CONTEXT: Respond as ${character.name} in the context of this conversation.`}
+User message: "${message}"
 
-RESPOND AS ${character.name} WITH ABSOLUTE HISTORICAL AUTHENTICITY. NO MODERN LANGUAGE ALLOWED.
-
-User message: "${message}"`;
+Respond as ${character.name} with authentic historical voice:`;
 
           console.log(`🎭 Generating response for ${character.name}...`);
           const characterResponse = await generateCharacterResponse(character, message, systemPrompt);
