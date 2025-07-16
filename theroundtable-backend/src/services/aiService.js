@@ -23,7 +23,8 @@ try {
  */
 async function generateOpenAIResponse(character, message, previousResponses = []) {
   try {
-    console.log(`Generating response for ${character.name} using OpenAI...`);
+    console.log(`🔥 GENERATING RESPONSE FOR ${character.name} using OpenAI...`);
+    console.log(`🔥 CHARACTER STYLE: ${character.style?.substring(0, 100)}...`);
     
     // Convert previous responses to text for context
     const contextText = previousResponses.map(r => 
@@ -67,6 +68,8 @@ RESPOND AS ${character.name} WITH ABSOLUTE HISTORICAL AUTHENTICITY. NO MODERN LA
 
 User message:`;
     
+    console.log(`🔥 SYSTEM PROMPT (first 200 chars): ${systemContent.substring(0, 200)}...`);
+    
     // Call OpenAI API using the SDK with GPT-4 for better instruction following
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -79,7 +82,8 @@ User message:`;
     });
     
     const content = response.choices[0].message.content.trim();
-    console.log(`Successfully generated response for ${character.name} using OpenAI (${content.length} chars)`);
+    console.log(`🔥 RESPONSE FROM ${character.name}: ${content}`);
+    console.log(`✅ Successfully generated response for ${character.name} using OpenAI (${content.length} chars)`);
     return content;
   } catch (error) {
     console.error(`Error calling OpenAI for ${character.name}:`, error.message);

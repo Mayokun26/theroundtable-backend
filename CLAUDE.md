@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Confirm the plan with the user before showing any code.**
 - **Ask questions for multiple rounds until you fully understand the requirements.**
 - **You might not have access to .env or .gitignore files.**
+- **NO LOCAL DEVELOPMENT - All work is done for AWS deployment only.**
 
 ## Git Workflow - IMPORTANT
 

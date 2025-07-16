@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ConversationPanel from '../components/ConversationPanel';
+import CharacterGrid from '../components/CharacterGrid';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
@@ -27,6 +28,7 @@ interface Character {
   description: string;
   traits: string[];
   imageUrl: string;
+  placeholderColor?: string;
 }
 
 interface Message {
@@ -39,6 +41,31 @@ interface Message {
   };
   timestamp: string;
 }
+
+const CharacterAvatar: React.FC<{ character: Character }> = ({ character }) => {
+  const initials = character.name.split(' ').map(word => word[0]).join('').toUpperCase();
+  
+  return (
+    <Box
+      sx={{
+        width: 60,
+        height: 60,
+        borderRadius: '50%',
+        backgroundColor: character.placeholderColor || '#95a5a6',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: 'white',
+        fontFamily: 'Arial, sans-serif',
+        fontWeight: 'bold',
+        fontSize: '1.2rem',
+        mr: 2
+      }}
+    >
+      {initials}
+    </Box>
+  );
+};
 
 const ConversationPage: React.FC = () => {
   const router = useRouter();
@@ -99,7 +126,8 @@ const ConversationPage: React.FC = () => {
             era: 'Ancient Greece',
             description: 'Classical Greek philosopher credited as the founder of Western philosophy.',
             traits: ['questioning', 'analytical', 'ironic', 'ethical'],
-            imageUrl: '/images/characters/socrates.jpg'
+            imageUrl: '/images/characters/socrates.svg',
+            placeholderColor: '#3498db'
           },
           {
             id: '2',
@@ -108,7 +136,8 @@ const ConversationPage: React.FC = () => {
             era: '19th-20th Century',
             description: 'Pioneer in research on radioactivity and the first woman to win a Nobel Prize.',
             traits: ['determined', 'focused', 'diligent'],
-            imageUrl: '/images/characters/marie-curie.jpg'
+            imageUrl: '/images/characters/marie-curie.svg',
+            placeholderColor: '#e74c3c'
           },
           {
             id: '3',
@@ -117,7 +146,8 @@ const ConversationPage: React.FC = () => {
             era: 'Ancient China',
             description: 'Chinese general and military strategist, author of The Art of War.',
             traits: ['strategic', 'disciplined', 'observant', 'pragmatic'],
-            imageUrl: '/images/characters/sun-tzu.jpg'
+            imageUrl: '/images/characters/sun-tzu.svg',
+            placeholderColor: '#f39c12'
           }
         ]);
         setLoading(false);
@@ -188,22 +218,33 @@ const ConversationPage: React.FC = () => {
 
       const data = await response.json();
 
-      // Add character responses to the conversation
+      // Add character responses to the conversation with progressive loading
       if (data.responses && data.responses.length > 0) {
-        // Add a slight delay before showing responses to simulate thinking time
-        setTimeout(() => {
-          data.responses.forEach((resp: { id?: string; name: string; content: string }, index: number) => {
+        // Sort responses to show primary responses first, then interactions
+        const sortedResponses = data.responses.sort((a: any, b: any) => {
+          if (a.type === 'primary' && b.type === 'interaction') return -1;
+          if (a.type === 'interaction' && b.type === 'primary') return 1;
+          return 0;
+        });
+
+        // Add responses progressively with delays
+        sortedResponses.forEach((resp: { id?: string; name: string; content: string; type?: string }, index: number) => {
+          setTimeout(() => {
             const characterResponse: Message = {
               id: `character-${messages.length + index + 2}`,
               content: resp.content,
               sender: 'character',
-              character: { id: resp.id || selectedCharacters[index], name: resp.name },
+              character: { id: resp.id || selectedCharacters[index % selectedCharacters.length], name: resp.name },
               timestamp: new Date().toISOString()
             };
             setMessages(prev => [...prev, characterResponse]);
-          });
-          setSendingMessage(false);
-        }, 1000);
+            
+            // Stop loading after the last response
+            if (index === sortedResponses.length - 1) {
+              setSendingMessage(false);
+            }
+          }, (index + 1) * 1500); // 1.5 second delays between responses
+        });
       } else {
         throw new Error('No responses received');
       }
@@ -258,73 +299,25 @@ const ConversationPage: React.FC = () => {
                 Select Your Panel
               </Typography>
               {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
-              <Typography variant="body2" gutterBottom color="text.secondary">
-                Choose characters to join your conversation panel ({selectedCharacters.length} selected)
-              </Typography>
-              
               <Box sx={{ mt: 2, mb: 3 }}>
                 <Button 
                   variant="contained" 
                   color="primary"
-                  disabled={panelConfirmed}
+                  disabled={panelConfirmed || selectedCharacters.length === 0}
                   onClick={handleConfirmPanel}
                   fullWidth
                 >
-                  {panelConfirmed ? 'Panel Confirmed' : 'Confirm Panel'}
+                  {panelConfirmed ? 'Panel Confirmed' : `Confirm Panel (${selectedCharacters.length}/3)`}
                 </Button>
               </Box>
               
               <Box sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto', pr: 1 }}>
-                {characters.map(character => (
-                  <Card 
-                    key={character.id} 
-                    sx={{ 
-                      mb: 2, 
-                      border: selectedCharacters.includes(character.id) ? 2 : 0,
-                      borderColor: 'primary.main',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                      <Box display="flex" alignItems="center">
-                        <Box 
-                          component="img" 
-                          src={character.imageUrl || '/images/placeholder.jpg'} 
-                          alt={character.name}
-                          sx={{ 
-                            width: 60, 
-                            height: 60, 
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            mr: 2
-                          }}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/images/placeholder.jpg';
-                          }}
-                        />
-                        <Box>
-                          <Typography variant="h6" component="div" sx={{ fontSize: '1rem' }}>
-                            {character.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {character.era} • {character.category}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ ml: 'auto' }}>
-                          <Checkbox 
-                            checked={selectedCharacters.includes(character.id)}
-                            onChange={() => handleCharacterSelect(character.id)}
-                            disabled={panelConfirmed}
-                          />
-                        </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                ))}
+                <CharacterGrid 
+                  characters={characters}
+                  selectedCharacters={selectedCharacters}
+                  onCharacterSelect={panelConfirmed ? undefined : handleCharacterSelect}
+                  maxSelection={3}
+                />
               </Box>
             </Box>
           </Grid>
