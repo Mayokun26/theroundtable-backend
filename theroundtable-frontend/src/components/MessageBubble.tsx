@@ -11,6 +11,7 @@ interface MessageProps {
   timestamp: string;
   enableTyping?: boolean;
   typingSpeed?: number;
+  messageId?: string;
 }
 
 const MessageContainer = styled.div<{ $isUser: boolean }>`
@@ -45,22 +46,32 @@ const MessageTime = styled.div`
   align-self: flex-end;
 `;
 
-const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 25 }) => {
+const TypingText: React.FC<{ text: string; speed?: number; messageId?: string }> = ({ text, speed = 25, messageId }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    if (currentIndex < text.length) {
+    // Reset when text changes
+    setDisplayedText('');
+    setCurrentIndex(0);
+    setIsComplete(false);
+  }, [text, messageId]);
+
+  useEffect(() => {
+    if (currentIndex < text.length && !isComplete) {
       const timer = setTimeout(() => {
         setDisplayedText(prev => prev + text[currentIndex]);
         setCurrentIndex(prev => prev + 1);
       }, speed);
 
       return () => clearTimeout(timer);
+    } else if (currentIndex >= text.length && !isComplete) {
+      setIsComplete(true);
     }
-  }, [currentIndex, text, speed]);
+  }, [currentIndex, text, speed, isComplete]);
 
-  return <span>{displayedText}{currentIndex < text.length && <span className="typing-cursor">|</span>}</span>;
+  return <span>{displayedText}{!isComplete && <span className="typing-cursor">|</span>}</span>;
 };
 
 const TypingStyles = styled.div`
@@ -82,7 +93,8 @@ const MessageBubbleComponent: React.FC<MessageProps> = ({
   character, 
   timestamp, 
   enableTyping = false,
-  typingSpeed = 25 
+  typingSpeed = 25,
+  messageId
 }) => {
   const isUser = sender === 'user';
   const senderName = isUser ? 'You' : character?.name || 'Unknown';
@@ -103,7 +115,7 @@ const MessageBubbleComponent: React.FC<MessageProps> = ({
       // For typing effect, show entire text with typing animation
       return (
         <div style={{ lineHeight: '1.5' }}>
-          <TypingText text={text} speed={typingSpeed} />
+          <TypingText text={text} speed={typingSpeed} messageId={messageId} />
         </div>
       );
     } else {

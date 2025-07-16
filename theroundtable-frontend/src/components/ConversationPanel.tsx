@@ -167,19 +167,21 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendM
       <MessagesContainer>
         {messages.map((message, index) => {
           // Enable typing effect for character messages that have enableTyping set
+          // Only allow typing for the most recent message to prevent conflicts
           const shouldEnableTyping = message.sender === 'character' && 
                                     message.enableTyping && 
                                     !loading;
           
           return (
             <MessageBubble
-              key={message.id}
+              key={`${message.id}-${message.timestamp}`}
               content={message.content}
               sender={message.sender}
               character={message.character}
               timestamp={message.timestamp}
               enableTyping={shouldEnableTyping}
-              typingSpeed={25}
+              typingSpeed={30}
+              messageId={message.id}
             />
           );
         })}
