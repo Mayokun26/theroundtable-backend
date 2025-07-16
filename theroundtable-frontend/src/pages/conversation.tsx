@@ -209,7 +209,13 @@ const ConversationPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
-          characters: selectedCharacters
+          characters: selectedCharacters,
+          conversationHistory: messages
+            .filter(msg => msg.sender === 'character' && !msg.character?.id?.includes('herald') && !msg.character?.id?.includes('moderator'))
+            .map(msg => ({
+              speaker: msg.character?.name || 'Unknown',
+              message: msg.content
+            }))
         })
       });
 
