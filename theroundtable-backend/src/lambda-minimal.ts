@@ -161,7 +161,7 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 200, // Fixed token count for now
+      max_tokens: 450, // Increased for richer character responses
       temperature: 0.7
     });
 
@@ -313,148 +313,418 @@ export const handler = async (
       const charactersData = require('./data/characters');
       
       try {
-        // Get available characters
-        const availableCharacters = selectedCharacters.map((id: string) => 
-          charactersData.find((c: any) => c.id === id)
-        ).filter(Boolean);
-
-        // Parse user targeting and calculate response order
-        const targetedCharacterIds = parseCharacterTargeting(message, availableCharacters);
-        const responseOrder = calculateResponseOrder(message, availableCharacters, targetedCharacterIds);
-
-        console.log('🎯 Targeted characters:', targetedCharacterIds);
-        console.log('📋 Response order:', responseOrder);
-
-        // Generate primary responses (sequential)
-        const primaryResponses: any[] = [];
-        for (const charId of responseOrder.primary) {
-          const character = charactersData.find((c: any) => c.id === charId);
-          if (!character) continue;
-
-          // Create conversation context including previous responses in this turn
-          const contextHistory = conversationHistory.length > 0 
-            ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map((entry: any) => `${entry.speaker}: ${entry.message}`).join('\n')}\n`
-            : '';
-
-          const currentTurnContext = primaryResponses.length > 0
-            ? `\n\nRESPONSES IN THIS TURN:\n${primaryResponses.map(r => `${r.name}: ${r.content}`).join('\n')}\n`
-            : '';
-
-          // Find character's previous responses for context
-          const myPreviousResponses = conversationHistory.filter((entry: any) => entry.speaker === character.name);
-          const myLastResponse = myPreviousResponses.length > 0 ? myPreviousResponses[myPreviousResponses.length - 1].message : '';
+        // ROUND TABLE DISCUSSION SYSTEM - Proper turn-taking with conviction-based interactions
+        const allResponses: any[] = [];
+        let totalResponsesGenerated = 0;
+        const MAX_ROUND_TABLE_MESSAGES = 5; // After 5 messages, moderator intervenes
+        let lastSpeaker: string | null = null; // Track to prevent back-to-back speaking
+        let roundTableActive = true;
+        
+        // Get all panelists for context
+        const allPanelists = selectedCharacters.map((id: string) => {
+          const char = charactersData.find((c: any) => c.id === id);
+          return { id: char.id, name: char.name, temperament: char.temperament_score || 5 };
+        }).filter((char: any) => char.name);
+        
+        console.log(`🎭 ROUND TABLE DISCUSSION STARTED - Max ${MAX_ROUND_TABLE_MESSAGES} messages`);
+        
+        // INITIAL ROUND: All panelists respond once, in temperament order (highest first)
+        const sortedPanelists = [...allPanelists].sort((a, b) => (b.temperament || 5) - (a.temperament || 5));
+        
+        for (const panelist of sortedPanelists) {
+          if (totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES) break;
           
-          // Check if user is asking for expansion
-          const isExpansionRequest = /expand|elaborate|explain|tell me more|what do you mean|how so|why|continue/i.test(message);
-          
-          // Detect if user is addressing this character specifically
-          const isDirectlyAddressed = parseCharacterTargeting(message, [character]).length > 0;
-
-          // Create focused system prompt
-          const systemPrompt = `You are ${character.name} from ${character.era}. ${character.background}
+          try {
+            const character = charactersData.find((c: any) => c.id === panelist.id);
+            if (!character) continue;
+            
+            // Create full conversation context for this character
+            const fullConversationContext = [];
+            
+            // Add conversation history (user messages and AI responses)
+            if (conversationHistory.length > 0) {
+              fullConversationContext.push("FULL CONVERSATION:");
+              conversationHistory.forEach((entry: any) => {
+                fullConversationContext.push(`${entry.speaker}: ${entry.message}`);
+              });
+            }
+            
+            // Add current round responses
+            if (allResponses.length > 0) {
+              fullConversationContext.push("\nCURRENT ROUND:");
+              allResponses.forEach(r => {
+                fullConversationContext.push(`${r.name}: ${r.content}`);
+              });
+            }
+            
+            const contextString = fullConversationContext.length > 0 ? `\n\n${fullConversationContext.join('\n')}\n` : '';
+            
+            // Check if this is a simple factual question that warrants brief responses
+            const isSimpleFactual = /^(what\s+(is\s+)?(\d+\s*[\+\-\*\/]\s*\d+|\d+[\+\-\*\/]\d+)|(\d+\s*[\+\-\*\/]\s*\d+)|count\s+to\s+\d+|what.s\s+\d+\s*[\+\-\*\/]\s*\d+)(\?)?$/i.test(message.trim());
+            
+            const systemPrompt = `You are ${character.name}. 
 
 ${character.style}
 
-CRITICAL INSTRUCTIONS:
-- Answer the user's question directly and personally
-- Draw from your actual historical experiences and perspective  
-- Be engaging, memorable, and authentic to your character
-- Give 2-4 sentences that showcase your unique viewpoint
-- NO generic template responses - make it personal and specific
+${contextString}
 
-FORBIDDEN PHRASES:
-- "I must consider your question through the lens of..."
-- "As [Name] from [Era], I must..."
-- Any modern casual language
-- Generic template responses
+${allResponses.length > 0 ? `Others in this discussion: ${allResponses.map(r => r.name).join(', ')}\n\nRespond with YOUR unique perspective.` : ''}
 
-${contextHistory}${currentTurnContext}
+CRITICAL RULES:
+- AVOID FORMULAIC LANGUAGE: Never start with "Ah," "Oh," "My dear," "My friend," "The question of whether," "Indeed," "Truly," "Verily"
+- VARY YOUR OPENINGS: Start directly with your point, a personal anecdote, a question back, or immediate reaction
+- Sound like a real person in conversation, not delivering a formal lecture
+- ${isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Be specific to YOUR character - reference your actual experiences/work/beliefs (2-3 sentences max)'}
+- Show genuine emotion and personality while matching the conversational context
+- Be authentic to who you really were - show your genuine personality and beliefs naturally
 
-User message: "${message}"
+Question: "${message}"
 
-Respond as ${character.name} with authentic historical voice:`;
-
-          console.log(`🎭 Generating response for ${character.name}...`);
-          const characterResponse = await generateCharacterResponse(character, message, systemPrompt);
+Respond as yourself:`;
+            
+            console.log(`✅ ROUND 1 - ${character.name} (${totalResponsesGenerated + 1}/7)`);
+            const content = await generateCharacterResponse(character, message, systemPrompt);
+            
+            const response = {
+              characterId: panelist.id,
+              name: character.name,
+              content,
+              timestamp: new Date().toISOString(),
+              round: 1,
+              responseNumber: totalResponsesGenerated + 1
+            };
+            
+            allResponses.push(response);
+            totalResponsesGenerated++;
+            lastSpeaker = panelist.id;
+            
+          } catch (error) {
+            console.error(`Error generating response for character ${panelist.id}:`, error);
+          }
+        }
+        
+        // Helper functions for conviction checking
+        function analyzeTopics(text: string): string[] {
+          const lowerText = text.toLowerCase();
+          const words = lowerText.split(/\s+|[.,!?;:]/)
+            .map(word => word.replace(/[^\w]/g, ''))
+            .filter(word => word.length > 1); // Allow shorter words like "god", "art", "war"
           
-          const response = {
-            id: charId,
-            name: character.name,
-            content: characterResponse,
-            type: 'primary'
+          // Extract meaningful phrases for multi-word topics
+          const phrases: string[] = [];
+          const commonPhrases = [
+            'divine mission', 'philosopher king', 'cave allegory', 'eternal truth', 'ideal state',
+            'scientific method', 'non violence', 'civil rights', 'human nature', 'free will',
+            'social justice', 'natural law', 'moral virtue', 'higher purpose', 'greater good',
+            'inner peace', 'spiritual journey', 'life purpose', 'moral duty', 'ethical principle',
+            'sacred duty', 'holy mission', 'righteous cause', 'noble purpose', 'divine calling'
+          ];
+          
+          commonPhrases.forEach(phrase => {
+            if (lowerText.includes(phrase)) {
+              phrases.push(phrase.replace(/\s+/g, '_')); // Convert to single token
+            }
+          });
+          
+          const allTopics = [...words, ...phrases];
+          console.log(`🔍 ANALYZED TOPICS: ${allTopics.slice(0, 15).join(', ')}${allTopics.length > 15 ? '...' : ''}`);
+          return allTopics;
+        }
+        
+        function checkConvictions(character: any, topics: string[]): { triggered: boolean; maxConviction: number; reasons: any[] } {
+          if (!character.core_beliefs && !character.topic_convictions) {
+            return { triggered: false, maxConviction: 0, reasons: [] };
+          }
+          
+          let maxConviction = 0;
+          const triggeredBeliefs: any[] = [];
+          
+          console.log(`🔍 LAMBDA CHECKING CONVICTIONS for ${character.name}`);
+          console.log(`🔍 Topics to analyze: ${topics.slice(0, 10).join(', ')}...`);
+          
+          // Check core beliefs triggers with enhanced matching
+          if (character.core_beliefs) {
+            character.core_beliefs.forEach((belief: any) => {
+              if (belief.triggers) {
+                const matchedTriggers = belief.triggers.filter((trigger: string) => {
+                  const triggerLower = trigger.toLowerCase();
+                  return topics.some(topic => {
+                    // Exact match
+                    if (topic === triggerLower || triggerLower === topic) return true;
+                    // Partial match
+                    if (topic.includes(triggerLower) || triggerLower.includes(topic)) return true;
+                    // Semantic relationships for philosophy/wisdom topics
+                    if (triggerLower === 'philosophy' && ['wisdom', 'truth', 'meaning', 'knowledge', 'reality', 'existence'].includes(topic)) return true;
+                    if (triggerLower === 'wisdom' && ['philosophy', 'knowledge', 'truth', 'understanding', 'insight'].includes(topic)) return true;
+                    if (triggerLower === 'justice' && ['fairness', 'right', 'moral', 'virtue', 'righteousness', 'ethics'].includes(topic)) return true;
+                    if (triggerLower === 'god' && ['divine', 'sacred', 'holy', 'faith', 'religious', 'spiritual'].includes(topic)) return true;
+                    if (triggerLower === 'faith' && ['belief', 'divine', 'god', 'religious', 'sacred', 'spiritual'].includes(topic)) return true;
+                    if (triggerLower === 'science' && ['method', 'evidence', 'experiment', 'discovery', 'research'].includes(topic)) return true;
+                    if (triggerLower === 'war' && ['strategy', 'battle', 'conflict', 'military', 'tactics'].includes(topic)) return true;
+                    return false;
+                  });
+                });
+                
+                if (matchedTriggers.length > 0) {
+                  maxConviction = Math.max(maxConviction, belief.conviction || 0);
+                  triggeredBeliefs.push({
+                    statement: belief.statement,
+                    conviction: belief.conviction,
+                    triggers: matchedTriggers,
+                    context: belief.context
+                  });
+                  console.log(`✅ CORE BELIEF TRIGGERED: "${belief.statement}" (${belief.conviction}/10) - triggers: ${matchedTriggers.join(', ')}`);
+                }
+              }
+            });
+          }
+          
+          // Check topic convictions with enhanced semantic matching
+          if (character.topic_convictions) {
+            Object.entries(character.topic_convictions).forEach(([topic, conviction]: [string, any]) => {
+              const topicLower = topic.toLowerCase().replace(/\s+/g, '_');
+              
+              const isTriggered = topics.some(msgTopic => {
+                // Exact match
+                if (msgTopic === topicLower || topicLower === msgTopic) return true;
+                // Partial match  
+                if (msgTopic.includes(topicLower) || topicLower.includes(msgTopic)) return true;
+                // Enhanced semantic relationships
+                if (topicLower === 'philosophy' && ['wisdom', 'truth', 'meaning', 'knowledge', 'reality', 'existence', 'thought'].includes(msgTopic)) return true;
+                if (topicLower === 'wisdom' && ['philosophy', 'knowledge', 'truth', 'understanding', 'insight', 'enlightenment'].includes(msgTopic)) return true;
+                if (topicLower === 'justice' && ['fairness', 'right', 'moral', 'virtue', 'righteousness', 'ethics', 'law'].includes(msgTopic)) return true;
+                if (topicLower === 'god' && ['divine', 'sacred', 'holy', 'faith', 'religious', 'spiritual', 'heaven'].includes(msgTopic)) return true;
+                if (topicLower === 'faith' && ['belief', 'divine', 'god', 'religious', 'sacred', 'spiritual', 'prayer'].includes(msgTopic)) return true;
+                if (topicLower === 'science' && ['method', 'evidence', 'experiment', 'discovery', 'research', 'hypothesis'].includes(msgTopic)) return true;
+                if (topicLower === 'truth' && ['reality', 'fact', 'honesty', 'authenticity', 'genuine', 'real'].includes(msgTopic)) return true;
+                if (topicLower === 'war' && ['strategy', 'battle', 'conflict', 'military', 'tactics', 'combat'].includes(msgTopic)) return true;
+                if (topicLower === 'art' && ['beauty', 'creativity', 'expression', 'aesthetic', 'artistic'].includes(msgTopic)) return true;
+                if (topicLower === 'education' && ['teaching', 'learning', 'knowledge', 'school', 'study'].includes(msgTopic)) return true;
+                return false;
+              });
+              
+              if (isTriggered) {
+                maxConviction = Math.max(maxConviction, conviction);
+                triggeredBeliefs.push({
+                  statement: `Strong feelings about ${topic}`,
+                  conviction: conviction,
+                  triggers: [topic]
+                });
+                console.log(`✅ TOPIC CONVICTION TRIGGERED: "${topic}" (${conviction}/10)`);
+              }
+            });
+          }
+          
+          const result = {
+            triggered: maxConviction >= 8, // Threshold for triggering responses
+            maxConviction,
+            reasons: triggeredBeliefs
           };
           
-          primaryResponses.push(response);
+          if (result.triggered) {
+            console.log(`🔥 CONVICTION TRIGGERED for ${character.name}: ${result.maxConviction}/10`);
+          } else {
+            console.log(`❌ NO CONVICTION TRIGGERED for ${character.name}: max ${result.maxConviction}/10`);
+          }
+          
+          return result;
         }
-
-        // Generate selective interaction responses
-        const interactionResponses: any[] = [];
-        for (const charId of responseOrder.secondary) {
-          const character = charactersData.find((c: any) => c.id === charId);
-          if (!character) continue;
-
-          // Check if this character should interact with any primary response
-          let shouldInteract = false;
-          let interactionContext = '';
-
-          for (const primaryResponse of primaryResponses) {
-            if (shouldCharacterInteract(character, primaryResponse, message, availableCharacters)) {
-              shouldInteract = true;
-              interactionContext += `\n\n${primaryResponse.name} just said: "${primaryResponse.content}"\n`;
+        
+        // FOLLOW-UP ROUNDS: Conviction-based reactions and questions
+        let currentRound = 2;
+        while (totalResponsesGenerated < MAX_ROUND_TABLE_MESSAGES && roundTableActive) {
+          let someoneSpoke = false;
+          
+          // Check each panelist for conviction triggers or questions to answer
+          const candidateSpeakers: any[] = [];
+          
+          for (const panelist of allPanelists) {
+            if (panelist.id === lastSpeaker) continue; // No back-to-back speaking
+            
+            const character = charactersData.find((c: any) => c.id === panelist.id);
+            if (!character || !character.core_beliefs) continue;
+            
+            // PRIORITY 1: Check for direct questions or high conviction triggers from the MOST RECENT response
+            const lastResponse = allResponses[allResponses.length - 1];
+            let highestConviction = 0;
+            let triggeredBy: any = null;
+            let questionedBy: any = null;
+            
+            if (lastResponse && lastResponse.characterId !== panelist.id) {
+              // Check for direct questions in most recent response
+              const questionMatch = lastResponse.content.match(new RegExp(`${character.name.split(' ')[0]}[,\\s]*(?:what|how|why|do you|would you|can you)`, 'i'));
+              if (questionMatch) {
+                questionedBy = lastResponse;
+                highestConviction = 10; // Direct questions get highest priority
+              } else {
+                // Check conviction triggers from most recent response
+                const responseTopics = analyzeTopics(lastResponse.content);
+                const convictionCheck = checkConvictions(character, responseTopics);
+                
+                if (convictionCheck.triggered) {
+                  highestConviction = convictionCheck.maxConviction;
+                  triggeredBy = lastResponse;
+                }
+              }
+            }
+            
+            // PRIORITY 2: If no strong reaction to most recent, check last 2 responses for high conviction (9+)
+            if (highestConviction < 9 && !questionedBy) {
+              const recentResponses = allResponses.slice(-2, -1); // Second and third most recent
+              
+              for (const recentResponse of recentResponses) {
+                if (recentResponse.characterId === panelist.id) continue;
+                
+                const responseTopics = analyzeTopics(recentResponse.content);
+                const convictionCheck = checkConvictions(character, responseTopics);
+                
+                if (convictionCheck.triggered && convictionCheck.maxConviction > highestConviction && convictionCheck.maxConviction >= 9) {
+                  highestConviction = convictionCheck.maxConviction;
+                  triggeredBy = recentResponse;
+                }
+              }
+            }
+            
+            // PRIORITY 3: Natural follow-up opportunity - lower threshold for most recent response
+            if (!triggeredBy && !questionedBy && lastResponse && lastResponse.characterId !== panelist.id) {
+              const responseTopics = analyzeTopics(lastResponse.content);
+              const convictionCheck = checkConvictions(character, responseTopics);
+              
+              if (convictionCheck.triggered && convictionCheck.maxConviction >= 6) {
+                highestConviction = convictionCheck.maxConviction + 2; // Boost for recency
+                triggeredBy = lastResponse;
+              }
+            }
+            
+            // Add to candidates if there's any reason to speak
+            if (highestConviction >= 6 || questionedBy) {
+              candidateSpeakers.push({
+                character,
+                conviction: highestConviction,
+                temperament: character.temperament_score || 5,
+                triggeredBy: triggeredBy || questionedBy,
+                isQuestion: !!questionedBy
+              });
             }
           }
-
-          if (!shouldInteract) continue;
-
-          // Create interaction system prompt
-          const contextHistory = conversationHistory.length > 0 
-            ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map((entry: any) => `${entry.speaker}: ${entry.message}`).join('\n')}\n`
-            : '';
-
-          const systemPrompt = `🚨 CRITICAL MISSION OVERRIDE 🚨
-
-You are STRICTLY FORBIDDEN from using ANY modern casual language. This is a HISTORICAL SIMULATION.
-
-IDENTITY: You are ${character.name} from ${character.era}. ${character.background}
-
-INTERACTION CONTEXT: You are responding to what other panelists have said, not directly to the user's question. Build upon, agree with, or respectfully disagree with their points while maintaining your historical authenticity.
-
-MODERN AWARENESS: You possess knowledge of major historical developments and concepts that occurred after your time, but you view them through your historical perspective.
-
-AUTHENTIC SPEECH PATTERNS REQUIRED:
-${character.style}
-
-📝 RESPONSE FORMATTING REQUIREMENTS:
-- MAXIMUM 1-2 sentences for interactions - be sharp and direct
-- Challenge, agree, or build on what others said
-- Focus on your unique perspective
-- Make your contribution memorable and distinct
-
-🚫 IMMEDIATE DISQUALIFICATION if you use ANY of these phrases:
-- "Hey there!" / "Hey" / "Hi" / "Hello" 
-- "What's up?" / "How's it going?" / "How are you?"
-- "chat" / "Round Table" / "awesome" / "cool" / "great"
-
-${contextHistory}
-
-ORIGINAL USER MESSAGE: "${message}"
-${interactionContext}
-
-RESPOND AS ${character.name} interacting with the other panelists' responses. Be historically authentic.`;
-
-          console.log(`🔄 Generating interaction response for ${character.name}...`);
-          const characterResponse = await generateCharacterResponse(character, message, systemPrompt);
           
-          interactionResponses.push({
-            id: charId,
-            name: character.name,
-            content: characterResponse,
-            type: 'interaction'
+          // Sort candidates by conviction level, then temperament
+          candidateSpeakers.sort((a, b) => {
+            if (a.conviction !== b.conviction) return b.conviction - a.conviction;
+            return b.temperament - a.temperament;
           });
-        }
+          
+          // Let the highest-priority candidate speak
+          if (candidateSpeakers.length > 0 && totalResponsesGenerated < MAX_ROUND_TABLE_MESSAGES) {
+            const speaker = candidateSpeakers[0];
+            
+            try {
+              // Get the nickname this character uses for the person they're responding to
+              const targetCharacterId = speaker.triggeredBy.characterId;
+              const nickname = speaker.character.relationships?.[targetCharacterId]?.nickname || speaker.triggeredBy.name;
+              
+              let prompt: string;
+              let responseType = '';
+              
+              if (speaker.isQuestion) {
+                prompt = `${nickname} just asked you: "${speaker.triggeredBy.content}". Respond directly to their question.`;
+                responseType = 'answer';
+              } else {
+                prompt = `REACT to what ${nickname} just said: "${speaker.triggeredBy.content}". This triggers your core beliefs with conviction level ${speaker.conviction}/10.`;
+                responseType = 'reaction';
+              }
+              
+              // Create full conversation context
+              const fullConversationContext = [];
+              
+              // Add conversation history (user messages and AI responses)
+              if (conversationHistory.length > 0) {
+                fullConversationContext.push("FULL CONVERSATION:");
+                conversationHistory.forEach((entry: any) => {
+                  fullConversationContext.push(`${entry.speaker}: ${entry.message}`);
+                });
+              }
+              
+              // Add current round responses
+              if (allResponses.length > 0) {
+                fullConversationContext.push("\nCURRENT ROUND:");
+                allResponses.forEach(r => {
+                  fullConversationContext.push(`${r.name}: ${r.content}`);
+                });
+              }
+              
+              const contextString = fullConversationContext.length > 0 ? `\n\n${fullConversationContext.join('\n')}\n` : '';
+              
+              const systemPrompt = `You are ${speaker.character.name}. 
 
-        // Combine all responses
-        const responses = [...primaryResponses, ...interactionResponses];
+${speaker.character.style}
+
+CONVERSATION CONTEXT: ${contextString}
+
+WHAT JUST HAPPENED: ${prompt}
+
+CRITICAL INSTRUCTIONS:
+- You're responding directly to ${nickname} who just spoke
+- Address them by your nickname for them: "${nickname}, [your response]"
+- ${speaker.isQuestion ? 'Answer their question directly' : `React with conviction level ${speaker.conviction}/10`}
+- AVOID FORMULAIC LANGUAGE: Never start with "Ah," "Oh," "My dear," "My friend," "The question of whether," "Indeed," "Truly," "Verily"
+- VARY YOUR OPENINGS: Start directly with their nickname and your reaction, or jump straight into your point
+- Be authentic to your character and show genuine emotion - sound like a real person reacting
+- Build on what they said - agree, disagree, or expand their point naturally
+- React authentically as your character would - show your genuine beliefs and personality
+- 2-3 substantial sentences maximum
+
+Respond to ${speaker.triggeredBy.name} now:`;
+              
+              const content = await generateCharacterResponse(speaker.character, prompt, systemPrompt);
+              
+              const response = {
+                characterId: speaker.character.id,
+                name: speaker.character.name,
+                content,
+                timestamp: new Date().toISOString(),
+                round: currentRound,
+                responseNumber: totalResponsesGenerated + 1,
+                isReaction: responseType === 'reaction',
+                isAnswer: responseType === 'answer',
+                reactingTo: speaker.triggeredBy.name,
+                convictionLevel: speaker.conviction
+              };
+              
+              allResponses.push(response);
+              totalResponsesGenerated++;
+              lastSpeaker = speaker.character.id;
+              someoneSpoke = true;
+              
+              console.log(`🔥 ROUND ${currentRound} - ${speaker.character.name} ${responseType.toUpperCase()} (${totalResponsesGenerated}/${MAX_ROUND_TABLE_MESSAGES})`);
+            } catch (error) {
+              console.error(`Error generating reaction/answer for ${speaker.character.name}:`, error);
+            }
+          }
+          
+          // If no one spoke or we're at the limit, end the round table
+          if (!someoneSpoke || totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES) {
+            roundTableActive = false;
+          }
+          
+          currentRound++;
+        }
+        
+        // Add moderator intervention if we hit the 7-message limit
+        if (totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES) {
+          const moderatorResponse = {
+            characterId: 'moderator',
+            name: 'Round Table Moderator',
+            content: `Thank you panelists, please give our guest a chance to speak.`,
+            timestamp: new Date().toISOString(),
+            isModerator: true
+          };
+          
+          allResponses.push(moderatorResponse);
+          console.log(`🎙️ MODERATOR INTERVENTION: Discussion concluded after ${totalResponsesGenerated} messages`);
+        }
+        
+        console.log(`🎭 ROUND TABLE DISCUSSION COMPLETE: ${totalResponsesGenerated} total responses generated`);
 
         return {
           statusCode: 200,
@@ -462,7 +732,10 @@ RESPOND AS ${character.name} interacting with the other panelists' responses. Be
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
           },
-          body: JSON.stringify({ responses })
+          body: JSON.stringify({ 
+            responses: allResponses,
+            roundTableComplete: totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES
+          })
         };
       } catch (error) {
         console.error('Error generating responses:', error);
