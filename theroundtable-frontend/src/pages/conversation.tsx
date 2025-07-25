@@ -5,9 +5,6 @@ import {
   Typography, 
   Grid, 
   Button, 
-  Card, 
-  CardContent, 
-  Checkbox, 
   CircularProgress,
   Alert,
   AppBar,
@@ -41,32 +38,16 @@ interface Message {
   };
   timestamp: string;
   enableTyping?: boolean;
+  // Dynamic conversation properties
+  round?: number;
+  isReaction?: boolean;
+  reactingTo?: string;
+  isAnswer?: boolean;
+  answeringTo?: string;
+  convictionLevel?: number;
+  isModerator?: boolean;
 }
 
-const CharacterAvatar: React.FC<{ character: Character }> = ({ character }) => {
-  const initials = character.name.split(' ').map(word => word[0]).join('').toUpperCase();
-  
-  return (
-    <Box
-      sx={{
-        width: 60,
-        height: 60,
-        borderRadius: '50%',
-        backgroundColor: character.placeholderColor || '#95a5a6',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        color: 'white',
-        fontFamily: 'Arial, sans-serif',
-        fontWeight: 'bold',
-        fontSize: '1.2rem',
-        mr: 2
-      }}
-    >
-      {initials}
-    </Box>
-  );
-};
 
 const ConversationPage: React.FC = () => {
   const router = useRouter();
@@ -228,31 +209,55 @@ const ConversationPage: React.FC = () => {
       // Add character responses to the conversation with progressive loading
       if (data.responses && data.responses.length > 0) {
         // Sort responses to show primary responses first, then interactions
-        const sortedResponses = data.responses.sort((a: any, b: any) => {
+        const sortedResponses = data.responses.sort((a: { type?: string }, b: { type?: string }) => {
           if (a.type === 'primary' && b.type === 'interaction') return -1;
           if (a.type === 'interaction' && b.type === 'primary') return 1;
           return 0;
         });
 
-        // Add responses progressively with delays
-        sortedResponses.forEach((resp: { id?: string; name: string; content: string; type?: string }, index: number) => {
+        // Add responses one at a time with proper sequential typing
+        const addResponsesSequentially = (responses: any[], index = 0) => {
+          if (index >= responses.length) {
+            setSendingMessage(false);
+            return;
+          }
+          
+          const resp = responses[index];
+          const characterResponse: Message = {
+            id: `character-${Date.now()}-${index}`, // More unique IDs
+            content: resp.content,
+            sender: 'character',
+            character: { id: resp.characterId || resp.id || selectedCharacters[index % selectedCharacters.length], name: resp.name },
+            timestamp: resp.timestamp || new Date().toISOString(),
+            enableTyping: true, // Enable typing effect for better UX
+            // Dynamic conversation properties
+            round: resp.round,
+            isReaction: resp.isReaction,
+            reactingTo: resp.reactingTo,
+            isAnswer: resp.isAnswer,
+            answeringTo: resp.answeringTo,
+            convictionLevel: resp.convictionLevel,
+            isModerator: resp.isModerator
+          };
+          
+          // Add this message and disable typing for all previous messages
+          setMessages(prev => {
+            const updatedMessages = prev.map(msg => ({
+              ...msg,
+              enableTyping: false // Disable typing for all previous messages
+            }));
+            return [...updatedMessages, characterResponse];
+          });
+          
+          // Wait for this message to finish typing, then add the next one
+          const estimatedTypingTime = resp.content.length * 15 + 2000; // 15ms per char + 2s buffer
           setTimeout(() => {
-            const characterResponse: Message = {
-              id: `character-${Date.now()}-${index}`, // More unique IDs
-              content: resp.content,
-              sender: 'character',
-              character: { id: resp.id || selectedCharacters[index % selectedCharacters.length], name: resp.name },
-              timestamp: new Date().toISOString(),
-              enableTyping: false // Disable typing effect until fixed
-            };
-            setMessages(prev => [...prev, characterResponse]);
-            
-            // Stop loading after the last response
-            if (index === sortedResponses.length - 1) {
-              setSendingMessage(false);
-            }
-          }, (index + 1) * 800); // Faster responses for better conversation flow
-        });
+            addResponsesSequentially(responses, index + 1);
+          }, estimatedTypingTime);
+        };
+        
+        // Start the sequential process
+        addResponsesSequentially(sortedResponses);
       } else {
         throw new Error('No responses received');
       }
@@ -274,14 +279,20 @@ const ConversationPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        minHeight="100vh"
+        sx={{ backgroundColor: '#f5f5f5' }}
+      >
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <>
+    <Box sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Head>
         <title>Start a Conversation - The Round Table</title>
         <meta name="description" content="Have a conversation with historical figures, legendary characters, and fictional personalities." />
@@ -298,28 +309,58 @@ const ConversationPage: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth={false} sx={{ mt: 4, mx: 2 }}>
-        <Grid container spacing={3}>
+      <Container maxWidth={false} sx={{ mt: 2, mx: { xs: 0.5, sm: 2 }, px: { xs: 0.5, sm: 2 } }}>
+        <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
           {/* Left side - Character Selection */}
           <Grid item xs={12} md={5} lg={4}>
-            <Box sx={{ position: 'sticky', top: '20px' }}>
-              <Typography variant="h5" component="h2" gutterBottom>
+            <Box sx={{ 
+              position: { xs: 'static', md: 'sticky' }, 
+              top: '20px',
+              mb: { xs: 2, md: 0 }
+            }}>
+              <Typography variant="h5" component="h2" gutterBottom sx={{ 
+                fontSize: { xs: '1.1rem', sm: '1.5rem' },
+                fontWeight: 'bold',
+                mb: { xs: 1.5, sm: 2 }
+              }}>
                 Select Your Panel
               </Typography>
               {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
-              <Box sx={{ mt: 2, mb: 3 }}>
+              <Box sx={{ mt: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 } }}>
                 <Button 
                   variant="contained" 
                   color="primary"
                   disabled={panelConfirmed || selectedCharacters.length === 0}
                   onClick={handleConfirmPanel}
                   fullWidth
+                  sx={{
+                    py: { xs: 1.5, sm: 1.5 },
+                    fontSize: { xs: '1rem', sm: '1rem' },
+                    fontWeight: 'bold',
+                    minHeight: { xs: '48px', sm: '44px' },
+                    borderRadius: { xs: 2, sm: 1.5 }
+                  }}
                 >
                   {panelConfirmed ? 'Panel Confirmed' : `Confirm Panel (${selectedCharacters.length}/3)`}
                 </Button>
               </Box>
               
-              <Box sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto', pr: 1 }}>
+              <Box sx={{ 
+                maxHeight: { xs: '400px', sm: '500px', md: 'calc(100vh - 240px)' }, 
+                overflow: 'auto', 
+                pr: { xs: 0.5, sm: 1 },
+                '&::-webkit-scrollbar': {
+                  width: { xs: '4px', sm: '6px' }
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '10px'
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#c1c1c1',
+                  borderRadius: '10px'
+                }
+              }}>
                 <CharacterGrid 
                   characters={characters}
                   selectedCharacters={selectedCharacters}
@@ -333,17 +374,25 @@ const ConversationPage: React.FC = () => {
           
           {/* Right side - Conversation */}
           <Grid item xs={12} md={7} lg={8}>
-            <Box sx={{ height: 'calc(100vh - 120px)' }}>
+            <Box sx={{ 
+              height: { 
+                xs: 'calc(100vh - 120px)', 
+                sm: 'calc(100vh - 140px)', 
+                md: 'calc(100vh - 120px)' 
+              },
+              minHeight: { xs: '300px', sm: '400px' }
+            }}>
               <ConversationPanel 
                 messages={messages} 
                 onSendMessage={handleSendMessage} 
                 loading={sendingMessage}
+                selectedCharacterCount={selectedCharacters.length}
               />
             </Box>
           </Grid>
         </Grid>
       </Container>
-    </>
+    </Box>
   );
 };
 
