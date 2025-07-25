@@ -34,6 +34,76 @@ interface CharacterGridProps {
   showSearch?: boolean;
 }
 
+// Function to get character-specific border color
+const getCharacterBorderColor = (characterName: string): string => {
+  switch (characterName.toLowerCase()) {
+    // Ancient Philosophers & Thinkers
+    case 'socrates': return '#ce93d8'; // Purple
+    case 'plato': return '#9575cd'; // Deep purple  
+    case 'aristotle': return '#4db6ac'; // Teal
+    case 'confucius': return '#ffb74d'; // Orange
+    case 'lao tzu': return '#aed581'; // Light green
+    case 'pythagoras': return '#42a5f5'; // Sky blue
+    case 'marcus aurelius': return '#f06292'; // Rose
+    case 'hypatia': return '#ba68c8'; // Lavender
+    
+    // Scientists & Innovators
+    case 'marie curie': return '#bbdefb'; // Blue
+    case 'albert einstein': return '#fff176'; // Yellow
+    case 'nikola tesla': return '#66bb6a'; // Electric green
+    case 'galileo galilei': return '#4fc3f7'; // Cyan
+    case 'isaac newton': return '#dce775'; // Lime
+    case 'charles darwin': return '#81c784'; // Nature green
+    case 'ada lovelace': return '#f48fb1'; // Pink
+    case 'grace hopper': return '#26a69a'; // Mint
+    case 'alan turing': return '#7986cb'; // Purple
+    case 'ibn sina (avicenna)': return '#ff9800'; // Amber
+    case 'ibn al-haytham': return '#2196f3'; // Blue
+    case 'leonardo fibonacci': return '#66bb6a'; // Green
+    case 'rachel carson': return '#4caf50'; // Forest green
+    
+    // Military Leaders & Rulers
+    case 'sun tzu': return '#d7ccc8'; // Tan
+    case 'julius caesar': return '#f44336'; // Roman red
+    case 'alexander the great': return '#ff9800'; // Gold
+    case 'napoleon bonaparte': return '#3f51b5'; // Imperial blue
+    case 'joan of arc': return '#9c27b0'; // Royal purple
+    case 'cleopatra': return '#ffe082'; // Egyptian gold
+    case 'catherine the great': return '#5c6bc0'; // Russian blue
+    case 'queen elizabeth i': return '#ffc107'; // Tudor gold
+    case 'mahatma gandhi': return '#ff9800'; // Saffron
+    case 'nelson mandela': return '#388e3c'; // Hope green
+    
+    // Artists & Writers
+    case 'leonardo da vinci': return '#ff9800'; // Renaissance gold
+    case 'william shakespeare': return '#8e24aa'; // Theatrical purple
+    case 'michelangelo': return '#e91e63'; // Marble pink
+    case 'pablo picasso': return '#03a9f4'; // Cubist blue
+    case 'frida kahlo': return '#f44336'; // Passionate red
+    case 'georgia o\'keeffe': return '#ff9800'; // Desert orange
+    case 'jane austen': return '#8bc34a'; // English green
+    case 'virginia woolf': return '#673ab7'; // Literary purple
+    case 'emily dickinson': return '#cddc39'; // Recluse yellow
+    case 'mary shelley': return '#009688'; // Gothic teal
+    case 'maya angelou': return '#ff7043'; // Warm orange
+    case 'anne frank': return '#66bb6a'; // Hope green
+    case 'frederick douglass': return '#3f51b5'; // Freedom blue
+    
+    // Musicians & Performers  
+    case 'wolfgang amadeus mozart': return '#ffc107'; // Musical gold
+    case 'martha graham': return '#e91e63'; // Dance pink
+    
+    // Activists & Social Reformers
+    case 'florence nightingale': return '#f48fb1'; // Caring pink
+    case 'rosa parks': return '#7986cb'; // Dignity purple
+    case 'malcolm x': return '#f44336'; // Passionate red
+    case 'mary seacole': return '#ff9800'; // Caribbean gold
+    
+    default:
+      return '#1976d2'; // Default blue
+  }
+};
+
 const CharacterPlaceholder: React.FC<{ character: Character }> = ({ character }) => {
   const initials = character.name.split(' ').map(word => word[0]).join('').toUpperCase();
   
@@ -41,7 +111,7 @@ const CharacterPlaceholder: React.FC<{ character: Character }> = ({ character })
     <Box
       sx={{
         width: '100%',
-        height: 200,
+        height: { xs: 150, sm: 180, md: 200 },
         backgroundColor: character.placeholderColor || '#95a5a6',
         display: 'flex',
         flexDirection: 'column',
@@ -51,10 +121,26 @@ const CharacterPlaceholder: React.FC<{ character: Character }> = ({ character })
         fontFamily: 'Arial, sans-serif'
       }}
     >
-      <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+      <Typography 
+        variant="h3" 
+        component="div" 
+        sx={{ 
+          fontWeight: 'bold', 
+          mb: 1,
+          fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }
+        }}
+      >
         {initials}
       </Typography>
-      <Typography variant="body2" component="div" sx={{ textAlign: 'center', px: 1 }}>
+      <Typography 
+        variant="body2" 
+        component="div" 
+        sx={{ 
+          textAlign: 'center', 
+          px: 1,
+          fontSize: { xs: '0.8rem', sm: '0.875rem' }
+        }}
+      >
         {character.name}
       </Typography>
     </Box>
@@ -640,7 +726,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
     <Stack spacing={3}>
       {/* Search and Filter Controls */}
       {showSearch && (
-        <Stack spacing={2}>
+        <Stack spacing={{ xs: 3, sm: 2 }}>
         <TextField
           fullWidth
           label="Search characters"
@@ -648,15 +734,29 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           variant="outlined"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              fontSize: { xs: '1rem', sm: '1rem' },
+              '& input': {
+                padding: { xs: '14px 16px', sm: '12px 14px' }
+              }
+            }
+          }}
         />
         
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <FormControl sx={{ minWidth: 200 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 2 }}>
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 180, md: 200 } }}>
             <InputLabel>Category</InputLabel>
             <Select
               value={categoryFilter}
               label="Category"
               onChange={(e) => setCategoryFilter(e.target.value)}
+              sx={{
+                '& .MuiSelect-select': {
+                  padding: { xs: '14px 16px', sm: '12px 14px' },
+                  fontSize: { xs: '1rem', sm: '0.95rem' }
+                }
+              }}
             >
               <MenuItem value="">All Categories</MenuItem>
               {categories.map(category => (
@@ -665,12 +765,18 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
             </Select>
           </FormControl>
 
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 160, md: 200 } }}>
             <InputLabel>Era</InputLabel>
             <Select
               value={eraFilter}
               label="Era"
               onChange={(e) => setEraFilter(e.target.value)}
+              sx={{
+                '& .MuiSelect-select': {
+                  padding: { xs: '14px 16px', sm: '12px 14px' },
+                  fontSize: { xs: '1rem', sm: '0.95rem' }
+                }
+              }}
             >
               <MenuItem value="">All Eras</MenuItem>
               {eras.map(era => (
@@ -691,13 +797,13 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
       )}
 
       {/* Character Grid */}
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
         {filteredCharacters.map((character) => {
           const isSelected = selectedCharacters.includes(character.id);
           const canSelect = !isSelected && !isSelectionLimitReached;
           
           return (
-            <Grid item xs={12} sm={6} md={6} lg={4} key={character.id}>
+            <Grid item xs={12} sm={6} md={4} lg={4} key={character.id}>
               <Card 
                 sx={{ 
                   height: '100%', 
@@ -706,24 +812,39 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                   transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
                   cursor: onCharacterSelect ? 'pointer' : 'default',
                   opacity: (!onCharacterSelect || canSelect || isSelected) ? 1 : 0.5,
-                  border: isSelected ? '2px solid #1976d2' : '1px solid rgba(0, 0, 0, 0.12)',
+                  border: isSelected ? `3px solid ${getCharacterBorderColor(character.name)}` : '1px solid rgba(0, 0, 0, 0.12)',
+                  minHeight: { xs: '280px', sm: '300px' },
                   '&:hover': {
-                    transform: (onCharacterSelect && (canSelect || isSelected)) ? 'translateY(-5px)' : 'none',
-                    boxShadow: (onCharacterSelect && (canSelect || isSelected)) ? '0 12px 20px rgba(0, 0, 0, 0.1)' : 'none'
+                    transform: (onCharacterSelect && (canSelect || isSelected)) ? 'translateY(-3px)' : 'none',
+                    boxShadow: (onCharacterSelect && (canSelect || isSelected)) ? '0 8px 16px rgba(0, 0, 0, 0.12)' : 'none'
+                  },
+                  '&:active': {
+                    transform: (onCharacterSelect && (canSelect || isSelected)) ? 'translateY(-1px)' : 'none'
                   }
                 }}
                 onClick={() => handleCharacterClick(character.id)}
               >
                 <CharacterPlaceholder character={character} />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h5" component="div">
+                <CardContent sx={{ flexGrow: 1, p: { xs: 2, sm: 2 } }}>
+                  <Typography gutterBottom variant="h5" component="div" sx={{ 
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' }, 
+                    fontWeight: 'bold',
+                    mb: { xs: 1, sm: 1.5 }
+                  }}>
                     {character.name}
                     {isSelected && " ✓"}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Typography variant="body2" color="text.secondary" gutterBottom sx={{
+                    fontSize: { xs: '0.85rem', sm: '0.875rem' },
+                    mb: { xs: 1, sm: 1.5 }
+                  }}>
                     {character.era || 'Unknown era'} • {character.category || 'Uncategorized'}
                   </Typography>
-                  <Typography variant="body2" paragraph sx={{ mb: 2 }}>
+                  <Typography variant="body2" paragraph sx={{ 
+                    mb: { xs: 1.5, sm: 2 },
+                    fontSize: { xs: '0.9rem', sm: '0.875rem' },
+                    lineHeight: { xs: 1.4, sm: 1.43 }
+                  }}>
                     {character.description || 'No description available.'}
                   </Typography>
                   <Box display="flex" flexWrap="wrap" gap={0.5}>
@@ -733,7 +854,11 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                         label={trait}
                         size="small"
                         variant="outlined"
-                        sx={{ marginBottom: 0.5 }}
+                        sx={{ 
+                          marginBottom: 0.5,
+                          fontSize: { xs: '0.75rem', sm: '0.75rem' },
+                          height: { xs: '24px', sm: '24px' }
+                        }}
                       />
                     ))}
                   </Box>
