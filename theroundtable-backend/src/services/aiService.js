@@ -239,13 +239,15 @@ async function generateOpenAIResponse(character, message, context = {}) {
     // Handle both old and new context formats for backwards compatibility
     let contextText = '';
     let fullConversationText = '';
+    let othersContext = '';
     
     if (Array.isArray(context)) {
       // Old format - just previous responses
       contextText = context.map(r => `${r.name}: ${r.content}`).join("\n\n");
     } else {
       // New format - full context object
-      const { fullHistory = [], currentRound = [] } = context;
+      const { fullHistory = [], currentRound = [], othersContext: others = '' } = context;
+      othersContext = others;
       
       // Build full conversation history for context retention - use new format if available
       if (context.fullConversationContext && context.fullConversationContext.length > 0) {
@@ -269,32 +271,11 @@ async function generateOpenAIResponse(character, message, context = {}) {
     }
     
     // Create dynamic system prompt based on character and context  
-    const systemContent = contextText ? 
-      // CONVERSATIONAL VERSION - when others have spoken
-      `You are ${character.name}. Others have just responded to this question - you MUST directly engage with their ideas.
-
-${fullConversationText ? `FULL CONVERSATION HISTORY:\n${fullConversationText}\n\n` : ''}LATEST RESPONSES TO CURRENT QUESTION:
-${contextText}
-
-CRITICAL RULES:
-- Build on what others said using YOUR unique perspective as ${character.name}
-- Reference specific points made by ALL other speakers by name (don't ignore anyone!)
-- Use your specific NICKNAMES and RELATIONSHIP SENTIMENTS when addressing others
-- Let your feelings about each person (admiring/respectful/neutral/dismissive/hostile) show in your tone
-- When multiple people have spoken, acknowledge multiple viewpoints in your response
-- Agree, disagree, expand, or add nuance - but ALWAYS connect to their points
-- Remember the original question and conversation context
-- AVOID FORMULAIC LANGUAGE: Never start with "Ah," "Oh," "My dear," "My friend," "The question of whether," "Indeed," "Truly," "Verily"
-- VARY YOUR OPENINGS: Start directly with your point, a question, a reaction, or reference to what someone said
-- Stay authentic to your character but sound like a real person in conversation, not giving a formal speech
-- ${context.isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Keep responses conversational and engaging (2-4 sentences max)'}
-
-YOUR VOICE & STYLE: ${character.style}
-
-Respond naturally as ${character.name}, directly engaging with what others have said:` :
-      
-      // FIRST SPEAKER VERSION - when you speak first  
-      `You are ${character.name} from ${character.era}.
+    let systemContent = '';
+    
+    if (context.isFirstSpeaker === true) {
+      // FIRST SPEAKER VERSION - direct response to user
+      systemContent = `You are ${character.name} from ${character.era}.
 
 ${character.background}
 
@@ -310,6 +291,108 @@ ${fullConversationText ? `CONVERSATION HISTORY:\n${fullConversationText}\n\n` : 
 YOUR VOICE & STYLE: ${character.style}
 
 Current question:`;
+    } else if (context.isFirstSpeaker === false && context.previousResponses) {
+      // SECOND & THIRD SPEAKERS - 3 options system
+      const previousText = context.previousResponses.map(r => `${r.name}: "${r.content}"`).join('\n');
+      
+      systemContent = `You are ${character.name}.
+
+${character.style}
+
+${fullConversationText ? `CONVERSATION HISTORY:\n${fullConversationText}\n\n` : ''}PREVIOUS PANELIST${context.previousResponses.length > 1 ? 'S' : ''} JUST SPOKE:
+${previousText}
+
+USER'S ORIGINAL QUESTION: "${context.originalQuestion}"
+
+YOUR 3 OPTIONS - choose what feels most natural for your character:
+1. LIGHT ACKNOWLEDGMENT: Briefly acknowledge what others said, then give your own response to the user's question
+2. PIGGYBACK: Build on someone's point with your unique perspective  
+3. DIRECT RESPONSE: Respond directly to whoever said something that sparked your interest
+
+CRITICAL RULES FOR GROUP DISCUSSION:
+- TALK TO EACH OTHER, NOT JUST THE USER: Address other panelists by name frequently
+- USE THEIR NICKNAMES: If you have a relationship with someone, use your specific nickname for them
+- DISAGREE OR DEBATE: Don't just be polite - have real opinions and clash when you disagree
+- INTERRUPT THE FLOW: Jump in with "Wait, [Name]..." or "But [Nickname], you're missing..."
+- BE CONVERSATIONAL: Use "you" when talking to others, not "the Emperor" or "one might say"
+
+BANNED FORMULAIC PHRASES:
+- "Your inquiry strikes at..." "Your words strike at..." "Your question touches upon..."
+- "Indeed," "Truly," "Verily," "Ah," "Oh," "My dear friend"
+- "One might say..." "It seems to me..." "I find myself..."
+- "The question of whether..." "In my experience..." "Allow me to..."
+
+INSTEAD, START LIKE REAL PEOPLE:
+- "[Name], you're wrong about..." 
+- "Wait, that's not how..."
+- "I disagree with [Nickname] because..."
+- "Building on what [Name] said..."
+- Direct questions: "[Name], how can you say...?"
+
+Sound like you're in an actual argument/discussion, not giving a speech!
+
+Choose whichever option feels most authentic for ${character.name}:`;
+    } else if (contextText) {
+      // CONVERSATIONAL VERSION - when others have spoken (existing logic for follow-ups)
+      systemContent = `You are ${character.name}. Others have just responded to this question - you MUST directly engage with their ideas.
+
+${fullConversationText ? `FULL CONVERSATION HISTORY:\n${fullConversationText}\n\n` : ''}LATEST RESPONSES TO CURRENT QUESTION:
+${contextText}
+
+${othersContext ? `OTHERS ALSO SPOKE: ${othersContext}` : ''}
+
+CRITICAL INSTRUCTIONS FOR REAL CONVERSATION:
+- START WITH THEIR NAME/NICKNAME: "${othersContext ? 'Address someone by name first' : 'Use their name or nickname to start'}"
+- DISAGREE WHEN YOU DISAGREE: Don't be polite if you fundamentally disagree  
+- USE "YOU" WHEN TALKING TO THEM: "You said..." not "They said..." or "One might argue..."
+
+SOUND LIKE A REAL PERSON TALKING:
+- "[Name], you're wrong because..."
+- "Wait, [Name], that's not..."
+- "[Nickname]! I completely disagree..."
+- "Building on what [Name] said..."
+- "[Name], how can you say...?"
+
+BANNED FORMULAIC PHRASES - NEVER USE:
+- "Your inquiry strikes at..." "Your words strike at..." "Your question touches upon..."
+- "Indeed," "Truly," "Verily," "Ah," "Oh," "My dear friend"
+- "One might say..." "It seems to me..." "I find myself..."
+- "The question of whether..." "In my experience..." "Allow me to..."
+- "I must respectfully..." "With all due respect..." "If I may..."
+
+RELATIONSHIP REQUIREMENTS:
+- Use your specific NICKNAMES and RELATIONSHIP SENTIMENTS when addressing others
+- Let your feelings about each person (admiring/respectful/neutral/dismissive/hostile) show in your tone
+- Reference specific points made by ALL other speakers by name (don't ignore anyone!)
+- When multiple people have spoken, acknowledge multiple viewpoints but prioritize who you're responding to
+
+CONVERSATION RULES:
+- Sound like you're in an actual argument/discussion, not giving a speech
+- Be conversational but stay authentic to your character
+- ${context.isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Keep responses conversational and engaging (2-4 sentences max)'}
+
+YOUR VOICE & STYLE: ${character.style}
+
+Respond naturally as ${character.name}, directly engaging with what others have said:`;
+    } else {
+      // FALLBACK - original first speaker logic
+      systemContent = `You are ${character.name} from ${character.era}.
+
+${character.background}
+
+${fullConversationText ? `CONVERSATION HISTORY:\n${fullConversationText}\n\n` : ''}CRITICAL RULES:
+- Respond as ${character.name} with your authentic voice and perspective
+- Remember any previous conversation context
+- AVOID FORMULAIC LANGUAGE: Never start with "Ah," "Oh," "My dear," "My friend," "The question of whether," "Indeed," "Truly," "Verily"
+- VARY YOUR OPENINGS: Start directly with your point, a personal anecdote, a question back, or immediate reaction
+- Sound like a real person in conversation, not delivering a formal lecture
+- Be conversational but distinctive to your character - show your personality and beliefs naturally
+- ${context.isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Keep responses engaging and focused (2-4 sentences)'}
+
+YOUR VOICE & STYLE: ${character.style}
+
+Current question:`;
+    }
     
     // Add relationship context if we have other characters in the conversation
     let relationshipContext = '';

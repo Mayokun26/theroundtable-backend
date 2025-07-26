@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import axios from 'axios';
-import { Box, Button, Typography, Container, CircularProgress } from '@mui/material';
+import { Box, Button, Typography, Container, CircularProgress, Alert, Paper } from '@mui/material';
 import CharacterGrid from '../components/CharacterGrid';
 
 export default function Home() {
@@ -74,6 +74,40 @@ export default function Home() {
           <Typography variant="h5" color="text.secondary" paragraph>
             Welcome to The Round Table, a platform for engaging discussions with historical figures.
           </Typography>
+          
+          {/* Beta Disclaimer for App Store Compliance */}
+          <Paper 
+            elevation={2} 
+            sx={{ 
+              p: 3, 
+              mb: 4, 
+              bgcolor: 'warning.light', 
+              border: '1px solid',
+              borderColor: 'warning.main',
+              maxWidth: 600,
+              mx: 'auto'
+            }}
+          >
+            <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
+              🧪 Beta Release - AI-Generated Content
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              This app is in beta and uses AI to simulate conversations with historical figures. 
+              Please note:
+            </Typography>
+            <Box component="ul" sx={{ pl: 2, mb: 0 }}>
+              <Typography component="li" variant="body2">
+                Responses are AI-generated and may not be historically accurate
+              </Typography>
+              <Typography component="li" variant="body2">
+                Characters' views are simulated and may contain errors or anachronisms
+              </Typography>
+              <Typography component="li" variant="body2">
+                Content is for educational and entertainment purposes only
+              </Typography>
+            </Box>
+          </Paper>
+          
           <Box mt={4}>
             <Button 
               variant="contained" 
