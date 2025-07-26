@@ -13,22 +13,36 @@ interface Message {
   timestamp: string;
   isTyping?: boolean;
   enableTyping?: boolean;
+  // Dynamic conversation properties
+  round?: number;
+  isReaction?: boolean;
+  reactingTo?: string;
+  isAnswer?: boolean;
+  answeringTo?: string;
+  convictionLevel?: number;
+  isModerator?: boolean;
 }
 
 interface ConversationPanelProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
   loading: boolean;
+  selectedCharacterCount?: number;
 }
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: white;
+  background-color: #e9ecef;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  
+  @media (max-width: 768px) {
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 `;
 
 const Header = styled.div`
@@ -36,6 +50,11 @@ const Header = styled.div`
   color: white;
   padding: 16px;
   font-weight: 600;
+  
+  @media (max-width: 768px) {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
 `;
 
 const MessagesContainer = styled.div`
@@ -44,12 +63,27 @@ const MessagesContainer = styled.div`
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  
+  @media (max-width: 768px) {
+    padding: 8px;
+  }
 `;
 
 const InputContainer = styled.div`
   display: flex;
-  padding: 12px;
+  align-items: center;
+  padding: 16px;
   border-top: 1px solid #e0e0e0;
+  gap: 12px;
+  background-color: #ffffff;
+  
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+    gap: 10px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
 `;
 
 const Input = styled.input`
@@ -63,10 +97,14 @@ const Input = styled.input`
   &:focus {
     border-color: #4285f4;
   }
+  
+  @media (max-width: 768px) {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
 `;
 
 const SendButton = styled.button<{ disabled: boolean }>`
-  margin-left: 12px;
   padding: 10px 16px;
   background-color: ${(props) => (props.disabled ? '#cccccc' : '#4285f4')};
   color: white;
@@ -75,9 +113,15 @@ const SendButton = styled.button<{ disabled: boolean }>`
   font-size: 1rem;
   cursor: ${(props) => (props.disabled ? 'not-allowed' : 'pointer')};
   transition: background-color 0.3s ease;
+  white-space: nowrap;
   
   &:hover {
     background-color: ${(props) => (props.disabled ? '#cccccc' : '#3367d6')};
+  }
+  
+  @media (max-width: 768px) {
+    padding: 8px 12px;
+    font-size: 0.9rem;
   }
 `;
 
@@ -105,43 +149,8 @@ const LoadingIndicator = styled.div`
   }
 `;
 
-// Typing effect component
-const TypingText: React.FC<{ text: string; speed?: number; onComplete?: () => void }> = ({ 
-  text, 
-  speed = 30, 
-  onComplete 
-}) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
 
-  useEffect(() => {
-    if (currentIndex < text.length) {
-      const timer = setTimeout(() => {
-        setDisplayedText(prev => prev + text[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-      }, speed);
-
-      return () => clearTimeout(timer);
-    } else if (onComplete) {
-      onComplete();
-    }
-  }, [currentIndex, text, speed, onComplete]);
-
-  return <span>{displayedText}<span className="cursor">|</span></span>;
-};
-
-const TypingWrapper = styled.div`
-  .cursor {
-    animation: blink 1s infinite;
-  }
-  
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-  }
-`;
-
-const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendMessage, loading }) => {
+const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendMessage, loading, selectedCharacterCount = 0 }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -166,11 +175,10 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendM
       <Header>Round Table Conversation</Header>
       <MessagesContainer>
         {messages.map((message, index) => {
-          // Enable typing effect for character messages that have enableTyping set
-          // Only allow typing for the most recent message to prevent conflicts
+          // Only enable typing for messages that explicitly have enableTyping=true
+          // Allow typing even during loading for sequential character responses
           const shouldEnableTyping = message.sender === 'character' && 
-                                    message.enableTyping && 
-                                    !loading;
+                                    message.enableTyping === true;
           
           return (
             <MessageBubble
@@ -180,12 +188,26 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendM
               character={message.character}
               timestamp={message.timestamp}
               enableTyping={shouldEnableTyping}
-              typingSpeed={30}
+              typingSpeed={15}
               messageId={message.id}
+              round={message.round}
+              isReaction={message.isReaction}
+              reactingTo={message.reactingTo}
+              isAnswer={message.isAnswer}
+              answeringTo={message.answeringTo}
+              convictionLevel={message.convictionLevel}
+              isModerator={message.isModerator}
             />
           );
         })}
-        {loading && <LoadingIndicator>The panel is thinking</LoadingIndicator>}
+        {loading && (
+          <LoadingIndicator>
+            {selectedCharacterCount === 1 
+              ? 'The panelist is thinking' 
+              : 'The panelists are thinking'
+            }
+          </LoadingIndicator>
+        )}
         <div ref={messagesEndRef} />
       </MessagesContainer>
       <form onSubmit={handleSubmit}>
@@ -196,6 +218,8 @@ const ConversationPanel: React.FC<ConversationPanelProps> = ({ messages, onSendM
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask the round table..."
             disabled={loading}
+            autoComplete="off"
+            autoCapitalize="sentences"
           />
           <SendButton type="submit" disabled={loading || !input.trim()}>
             Send

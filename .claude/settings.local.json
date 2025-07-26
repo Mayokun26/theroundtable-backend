@@ -35,7 +35,13 @@
       "Bash(npx tsc:*)",
       "Bash(timeout 180s npm run build)",
       "Bash(npx next build:*)",
-      "Bash(tsc)"
+      "Bash(tsc)",
+      "Bash(find:*)",
+      "Bash(cp:*)",
+      "Bash(Remove-Item -Recurse -Force dist/data -ErrorAction SilentlyContinue)",
+      "Bash(Copy-Item -Recurse -Force src/data dist/data)",
+      "Bash(Copy-Item -Force package.json dist/package.json)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

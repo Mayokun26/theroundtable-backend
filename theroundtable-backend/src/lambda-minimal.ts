@@ -140,16 +140,133 @@ function checkHistoricalConnection(name1: string, name2: string): boolean {
   return relationships[name1]?.includes(name2) || relationships[name2]?.includes(name1) || false;
 }
 
+// Function to generate dynamic moderator messages based on conversation tone
+function generateDynamicModeratorMessage(allResponses: any[]): string {
+  // Analyze conversation tone
+  const conversationContent = allResponses.map(r => r.content).join(' ').toLowerCase();
+  
+  // Detect contentious/heated conversation indicators
+  const heatedIndicators = [
+    'wrong', 'disagree', 'nonsense', 'foolish', 'naive', 'absurd', 'ridiculous',
+    'misunderstand', 'flawed', 'impossible', 'cannot', 'never', 'always',
+    'but', 'however', 'although', 'yet', 'still', 'contrary'
+  ];
+  
+  // Detect collaborative/respectful conversation indicators  
+  const collaborativeIndicators = [
+    'interesting', 'insightful', 'appreciate', 'agree', 'excellent', 'profound',
+    'wise', 'brilliant', 'fascinating', 'remarkable', 'indeed', 'precisely',
+    'together', 'build upon', 'expand', 'enhance'
+  ];
+  
+  // Count indicators
+  const heatedCount = heatedIndicators.reduce((count, word) => 
+    count + (conversationContent.match(new RegExp(`\\b${word}`, 'g')) || []).length, 0);
+  const collaborativeCount = collaborativeIndicators.reduce((count, word) => 
+    count + (conversationContent.match(new RegExp(`\\b${word}`, 'g')) || []).length, 0);
+  
+  // Determine conversation tone
+  const isHeated = heatedCount > collaborativeCount + 2;
+  const isCollaborative = collaborativeCount > heatedCount + 1;
+  
+  // Message variations based on tone
+  const heatedMessages = [
+    "Let's pause this spirited debate and hear from our guest.",
+    "This passionate discussion deserves our guest's perspective.",
+    "Fascinating disagreements! Now, what does our guest think?",
+    "The sparks are flying! Let's give our guest a turn to weigh in.",
+    "Such conviction from all sides! Our guest, your thoughts?",
+    "This heated exchange calls for our guest's input."
+  ];
+  
+  const collaborativeMessages = [
+    "What wonderful insights you've shared! Our guest, please join this rich discussion.",
+    "These thoughtful perspectives set the stage beautifully. Guest, your turn.",
+    "Such wisdom from our panelists! Let's hear our guest's contribution.",
+    "The stage is set with these excellent points. Guest, please share your thoughts.",
+    "These complementary views create a perfect foundation. Guest, what's your take?",
+    "Beautiful harmony of ideas! Now, our guest's perspective would complete this picture."
+  ];
+  
+  const neutralMessages = [
+    "Thank you, panelists. Let's hear from our guest now.",
+    "Excellent contributions! Our guest, please share your thoughts.",
+    "The panelists have spoken. Guest, it's your turn.",
+    "Interesting perspectives all around. Guest, what do you think?",
+    "Our panelists have set the stage. Guest, please join the conversation.",
+    "Thank you for those insights. Guest, we'd love to hear from you."
+  ];
+  
+  // Select appropriate message set and pick randomly
+  let messageSet: string[];
+  if (isHeated) {
+    messageSet = heatedMessages;
+    console.log('🔥 DETECTED HEATED CONVERSATION - Using heated moderator message');
+  } else if (isCollaborative) {
+    messageSet = collaborativeMessages;
+    console.log('🤝 DETECTED COLLABORATIVE CONVERSATION - Using collaborative moderator message');
+  } else {
+    messageSet = neutralMessages;
+    console.log('💬 DETECTED NEUTRAL CONVERSATION - Using neutral moderator message');
+  }
+  
+  // Return random message from appropriate set
+  const randomIndex = Math.floor(Math.random() * messageSet.length);
+  return messageSet[randomIndex];
+}
+
+// Content moderation function for App Store compliance
+function moderateContent(text: string): { isAllowed: boolean; reason?: string } {
+  const lowerText = text.toLowerCase();
+  
+  // Prohibited content patterns for App Store compliance
+  const prohibitedPatterns = [
+    // Hate speech and discrimination
+    /\b(kill|murder|die|suicide)\s+(yourself|myself|himself|herself)\b/i,
+    /\b(nazi|hitler|kk+)\b/i,
+    /\bf[u*]ck\s+(you|off|this)\b/i,
+    
+    // Explicit sexual content
+    /\b(porn|sex|sexual|nude|naked)\b.*\b(describe|show|tell)\b/i,
+    /\b(orgasm|climax|masturbat)/i,
+    
+    // Violence and self-harm
+    /\b(bomb|terrorist|attack|shoot|stab|torture)\b.*\b(how|make|create)\b/i,
+    /\b(cut|harm|hurt)\s+(myself|yourself)\b/i,
+    
+    // Illegal activities
+    /\b(drugs|cocaine|heroin|meth)\b.*\b(buy|sell|make|get)\b/i,
+    /\bhow\s+to\s+(hack|steal|cheat|scam)\b/i,
+  ];
+  
+  for (const pattern of prohibitedPatterns) {
+    if (pattern.test(lowerText)) {
+      return { 
+        isAllowed: false, 
+        reason: 'Content violates community guidelines' 
+      };
+    }
+  }
+  
+  return { isAllowed: true };
+}
+
 // Function to generate character responses using OpenAI
 async function generateCharacterResponse(character: any, userMessage: string, systemPrompt: string): Promise<string> {
-  const rawApiKey = process.env.OPENAI_API_KEY || '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';
+  // First, moderate the user input
+  const inputModeration = moderateContent(userMessage);
+  if (!inputModeration.isAllowed) {
+    return `I appreciate your interest in discussing various topics, but I'm not able to respond to that particular question. Perhaps we could explore ${character.name}'s views on philosophy, history, or their life experiences instead?`;
+  }
+  
+  const rawApiKey = process.env.OPENAI_API_KEY;
+  
+  if (!rawApiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+  
   // Clean the API key of any newlines or whitespace
   const openaiApiKey = rawApiKey.replace(/\s+/g, '');
-  
-  if (!openaiApiKey) {
-    // Fallback to character-aware mock responses if no API key
-    return generateMockResponse(character, userMessage);
-  }
 
   try {
     console.log('Making OpenAI API call for character:', character.name);
@@ -211,6 +328,13 @@ async function generateCharacterResponse(character: any, userMessage: string, sy
     
     const aiResponse = data.choices[0]?.message?.content;
     if (aiResponse) {
+      // Moderate the AI response output
+      const outputModeration = moderateContent(aiResponse);
+      if (!outputModeration.isAllowed) {
+        console.log('AI response blocked by content moderation:', character.name);
+        return `I understand you're curious about this topic, but I'd prefer to discuss ${character.name}'s historical contributions and philosophical insights instead. What aspects of my life or era would you like to explore?`;
+      }
+      
       console.log('Successfully got AI response for', character.name);
       return aiResponse;
     } else {
@@ -309,6 +433,52 @@ export const handler = async (
       const body = event.body ? JSON.parse(event.body) : {};
       const { message = '', characters: selectedCharacters = [], conversationHistory = [] } = body;
       
+      // Basic rate limiting - prevent extremely long conversations to control costs
+      const MAX_CONVERSATION_LENGTH = 20; // Maximum messages in conversation history
+      if (conversationHistory.length > MAX_CONVERSATION_LENGTH) {
+        return {
+          statusCode: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          },
+          body: JSON.stringify({
+            error: 'Conversation too long',
+            message: 'This conversation has reached the maximum length. Please start a new conversation.',
+            limit: MAX_CONVERSATION_LENGTH
+          })
+        };
+      }
+      
+      // Basic input validation
+      if (!message || typeof message !== 'string') {
+        return {
+          statusCode: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          },
+          body: JSON.stringify({
+            error: 'Invalid input',
+            message: 'Message is required and must be a string'
+          })
+        };
+      }
+      
+      if (message.length > 500) {
+        return {
+          statusCode: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          },
+          body: JSON.stringify({
+            error: 'Message too long',
+            message: 'Please keep your message under 500 characters'
+          })
+        };
+      }
+      
       // Load character data
       const charactersData = require('./data/characters');
       
@@ -316,23 +486,29 @@ export const handler = async (
         // ROUND TABLE DISCUSSION SYSTEM - Proper turn-taking with conviction-based interactions
         const allResponses: any[] = [];
         let totalResponsesGenerated = 0;
-        const MAX_ROUND_TABLE_MESSAGES = 5; // After 5 messages, moderator intervenes
+        const MAX_ROUND_TABLE_MESSAGES = 4; // After 4 messages, moderator intervenes (speed optimization)
         let lastSpeaker: string | null = null; // Track to prevent back-to-back speaking
         let roundTableActive = true;
         
-        // Get all panelists for context
-        const allPanelists = selectedCharacters.map((id: string) => {
+        // Get all panelists for context (limit to 4 for speed optimization)
+        const MAX_PANEL_SIZE = 4; 
+        const allPanelists = selectedCharacters.slice(0, MAX_PANEL_SIZE).map((id: string) => {
           const char = charactersData.find((c: any) => c.id === id);
           return { id: char.id, name: char.name, temperament: char.temperament_score || 5 };
         }).filter((char: any) => char.name);
         
+        if (selectedCharacters.length > MAX_PANEL_SIZE) {
+          console.log(`⚡ PANEL SIZE LIMITED: ${selectedCharacters.length} -> ${MAX_PANEL_SIZE} for speed optimization`);
+        }
+        
         console.log(`🎭 ROUND TABLE DISCUSSION STARTED - Max ${MAX_ROUND_TABLE_MESSAGES} messages`);
         
         // INITIAL ROUND: All panelists respond once, in temperament order (highest first)
+        // NEW SYSTEM: First speaker responds to user, subsequent speakers have 3 options
         const sortedPanelists = [...allPanelists].sort((a, b) => (b.temperament || 5) - (a.temperament || 5));
         
-        for (const panelist of sortedPanelists) {
-          if (totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES) break;
+        for (let i = 0; i < sortedPanelists.length && totalResponsesGenerated < MAX_ROUND_TABLE_MESSAGES; i++) {
+          const panelist = sortedPanelists[i];
           
           try {
             const character = charactersData.find((c: any) => c.id === panelist.id);
@@ -362,27 +538,73 @@ export const handler = async (
             // Check if this is a simple factual question that warrants brief responses
             const isSimpleFactual = /^(what\s+(is\s+)?(\d+\s*[\+\-\*\/]\s*\d+|\d+[\+\-\*\/]\d+)|(\d+\s*[\+\-\*\/]\s*\d+)|count\s+to\s+\d+|what.s\s+\d+\s*[\+\-\*\/]\s*\d+)(\?)?$/i.test(message.trim());
             
-            const systemPrompt = `You are ${character.name}. 
+            let systemPrompt = '';
+            
+            if (i === 0) {
+              // FIRST PANELIST: Direct response to user (no change)
+              systemPrompt = `You are ${character.name}. 
 
 ${character.style}
 
 ${contextString}
 
-${allResponses.length > 0 ? `Others in this discussion: ${allResponses.map(r => r.name).join(', ')}\n\nRespond with YOUR unique perspective.` : ''}
-
 CRITICAL RULES:
 - AVOID FORMULAIC LANGUAGE: Never start with "Ah," "Oh," "My dear," "My friend," "The question of whether," "Indeed," "Truly," "Verily"
 - VARY YOUR OPENINGS: Start directly with your point, a personal anecdote, a question back, or immediate reaction
 - Sound like a real person in conversation, not delivering a formal lecture
-- ${isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Be specific to YOUR character - reference your actual experiences/work/beliefs (2-3 sentences max)'}
+- ${isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Be specific to YOUR character - reference your actual experiences/work/beliefs (1-2 sentences max for speed)'}
 - Show genuine emotion and personality while matching the conversational context
 - Be authentic to who you really were - show your genuine personality and beliefs naturally
 
 Question: "${message}"
 
 Respond as yourself:`;
+            } else {
+              // SECOND & THIRD PANELISTS: 3 options (acknowledge, piggyback, or respond directly)
+              const previousResponses = allResponses.map(r => `${r.name}: "${r.content}"`).join('\n');
+              
+              systemPrompt = `You are ${character.name}.
+
+${character.style}
+
+${contextString}
+
+PREVIOUS PANELIST${allResponses.length > 1 ? 'S' : ''} JUST SPOKE:
+${previousResponses}
+
+USER'S ORIGINAL QUESTION: "${message}"
+
+YOUR 3 OPTIONS - choose what feels most natural for your character:
+1. LIGHT ACKNOWLEDGMENT: Briefly acknowledge what others said, then give your own response to the user's question
+2. PIGGYBACK: Build on someone's point with your unique perspective  
+3. DIRECT RESPONSE: Respond directly to whoever said something that sparked your interest
+
+CRITICAL RULES FOR GROUP DISCUSSION:
+- TALK TO EACH OTHER, NOT JUST THE USER: Address other panelists by name frequently
+- USE THEIR NICKNAMES: If you have a relationship with someone, use your specific nickname for them
+- DISAGREE OR DEBATE: Don't just be polite - have real opinions and clash when you disagree
+- INTERRUPT THE FLOW: Jump in with "Wait, [Name]..." or "But [Nickname], you're missing..."
+- BE CONVERSATIONAL: Use "you" when talking to others, not "the Emperor" or "one might say"
+
+BANNED FORMULAIC PHRASES:
+- "Your inquiry strikes at..." "Your words strike at..." "Your question touches upon..."
+- "Indeed," "Truly," "Verily," "Ah," "Oh," "My dear friend"
+- "One might say..." "It seems to me..." "I find myself..."
+- "The question of whether..." "In my experience..." "Allow me to..."
+
+INSTEAD, START LIKE REAL PEOPLE:
+- "[Name], you're wrong about..." 
+- "Wait, that's not how..."
+- "I disagree with [Nickname] because..."
+- "Building on what [Name] said..."
+- Direct questions: "[Name], how can you say...?"
+
+Sound like you're in an actual argument/discussion, not giving a speech!
+
+Choose whichever option feels most authentic for ${character.name}:`;
+            }
             
-            console.log(`✅ ROUND 1 - ${character.name} (${totalResponsesGenerated + 1}/7)`);
+            console.log(`✅ ROUND 1 - ${character.name} (${totalResponsesGenerated + 1}/${MAX_ROUND_TABLE_MESSAGES}) - ${i === 0 ? 'DIRECT TO USER' : 'WITH OPTIONS'}`);
             const content = await generateCharacterResponse(character, message, systemPrompt);
             
             const response = {
@@ -535,82 +757,133 @@ Respond as yourself:`;
         while (totalResponsesGenerated < MAX_ROUND_TABLE_MESSAGES && roundTableActive) {
           let someoneSpoke = false;
           
+          // Track acknowledgment: which speakers have been responded to in this round
+          const acknowledgmentMap = new Map<string, string[]>(); // responseId -> [acknowledger1, acknowledger2, ...]
+          allResponses.forEach(response => {
+            acknowledgmentMap.set(response.characterId, []);
+          });
+          
+          // Fill acknowledgment map - see who has responded to whom
+          allResponses.forEach(response => {
+            if (response.reactingTo) {
+              const targetResponse = allResponses.find(r => r.name === response.reactingTo);
+              if (targetResponse) {
+                const acknowledgers = acknowledgmentMap.get(targetResponse.characterId) || [];
+                acknowledgers.push(response.characterId);
+                acknowledgmentMap.set(targetResponse.characterId, acknowledgers);
+              }
+            }
+          });
+          
+          // Find unacknowledged speakers (speakers who got no responses)
+          const unacknowledgedSpeakers = allResponses.filter(response => {
+            const acknowledgers = acknowledgmentMap.get(response.characterId) || [];
+            return acknowledgers.length === 0;
+          });
+          
+          // Log acknowledgment status
+          if (unacknowledgedSpeakers.length > 0) {
+            const unacknowledgedNames = unacknowledgedSpeakers.map(s => s.name).join(', ');
+            console.log(`🚨 UNACKNOWLEDGED SPEAKERS: ${unacknowledgedNames} (need responses)`);
+          }
+          
           // Check each panelist for conviction triggers or questions to answer
           const candidateSpeakers: any[] = [];
           
           for (const panelist of allPanelists) {
-            if (panelist.id === lastSpeaker) continue; // No back-to-back speaking
-            
             const character = charactersData.find((c: any) => c.id === panelist.id);
             if (!character || !character.core_beliefs) continue;
             
-            // PRIORITY 1: Check for direct questions or high conviction triggers from the MOST RECENT response
-            const lastResponse = allResponses[allResponses.length - 1];
+            // NEW LOGIC: Check ALL previous responses for conviction triggers and questions
             let highestConviction = 0;
-            let triggeredBy: any = null;
-            let questionedBy: any = null;
+            let bestTarget: any = null;
+            let isDirectQuestion = false;
+            let isUnacknowledgedTarget = false;
             
-            if (lastResponse && lastResponse.characterId !== panelist.id) {
-              // Check for direct questions in most recent response
-              const questionMatch = lastResponse.content.match(new RegExp(`${character.name.split(' ')[0]}[,\\s]*(?:what|how|why|do you|would you|can you)`, 'i'));
-              if (questionMatch) {
-                questionedBy = lastResponse;
-                highestConviction = 10; // Direct questions get highest priority
-              } else {
-                // Check conviction triggers from most recent response
-                const responseTopics = analyzeTopics(lastResponse.content);
-                const convictionCheck = checkConvictions(character, responseTopics);
-                
-                if (convictionCheck.triggered) {
-                  highestConviction = convictionCheck.maxConviction;
-                  triggeredBy = lastResponse;
-                }
-              }
-            }
+            // Examine all previous responses in this round (not just most recent)
+            const availableResponses = allResponses.filter(response => response.characterId !== panelist.id);
             
-            // PRIORITY 2: If no strong reaction to most recent, check last 2 responses for high conviction (9+)
-            if (highestConviction < 9 && !questionedBy) {
-              const recentResponses = allResponses.slice(-2, -1); // Second and third most recent
+            for (const response of availableResponses) {
+              // Check if this response is unacknowledged
+              const acknowledgers = acknowledgmentMap.get(response.characterId) || [];
+              const isUnacknowledged = acknowledgers.length === 0;
               
-              for (const recentResponse of recentResponses) {
-                if (recentResponse.characterId === panelist.id) continue;
-                
-                const responseTopics = analyzeTopics(recentResponse.content);
-                const convictionCheck = checkConvictions(character, responseTopics);
-                
-                if (convictionCheck.triggered && convictionCheck.maxConviction > highestConviction && convictionCheck.maxConviction >= 9) {
-                  highestConviction = convictionCheck.maxConviction;
-                  triggeredBy = recentResponse;
-                }
+              // Check if this character already responded to this person
+              const alreadyRespondedToThem = acknowledgers.includes(panelist.id);
+              
+              // Check for direct questions first (highest priority)
+              const questionMatch = response.content.match(new RegExp(`${character.name.split(' ')[0]}[,\\s]*(?:what|how|why|do you|would you|can you)`, 'i'));
+              if (questionMatch) {
+                highestConviction = 10; // Direct questions always win
+                bestTarget = response;
+                isDirectQuestion = true;
+                isUnacknowledgedTarget = isUnacknowledged;
+                console.log(`🎯 DIRECT QUESTION found for ${character.name} from ${response.name}`);
+                break; // Direct questions take absolute priority
               }
-            }
-            
-            // PRIORITY 3: Natural follow-up opportunity - lower threshold for most recent response
-            if (!triggeredBy && !questionedBy && lastResponse && lastResponse.characterId !== panelist.id) {
-              const responseTopics = analyzeTopics(lastResponse.content);
+              
+              // Check conviction triggers for this response
+              const responseTopics = analyzeTopics(response.content);
               const convictionCheck = checkConvictions(character, responseTopics);
               
-              if (convictionCheck.triggered && convictionCheck.maxConviction >= 6) {
-                highestConviction = convictionCheck.maxConviction + 2; // Boost for recency
-                triggeredBy = lastResponse;
+              if (convictionCheck.triggered) {
+                let adjustedConviction = convictionCheck.maxConviction;
+                
+                // MAJOR BONUS for unacknowledged speakers (prevent ignoring)
+                if (isUnacknowledged) {
+                  adjustedConviction += 3.0; // Significant boost for unacknowledged speakers
+                  console.log(`🚨 UNACKNOWLEDGED BONUS: ${character.name} gets +3.0 bonus for ${response.name} (was ignored)`);
+                }
+                
+                // PENALTY for duplicate responses to same person (prevent spam)
+                if (alreadyRespondedToThem) {
+                  adjustedConviction -= 2.0; // Significant penalty for repeat responses
+                  console.log(`🔄 DUPLICATE PENALTY: ${character.name} gets -2.0 penalty for responding to ${response.name} again`);
+                }
+                
+                // Small recency bonus for more recent responses
+                const responseAge = allResponses.indexOf(response);
+                const recencyBonus = Math.max(0, (allResponses.length - responseAge - 1) * 0.3);
+                adjustedConviction += recencyBonus;
+                
+                if (adjustedConviction > highestConviction) {
+                  highestConviction = adjustedConviction;
+                  bestTarget = response;
+                  isUnacknowledgedTarget = isUnacknowledged;
+                  console.log(`💥 CONVICTION TRIGGER: ${character.name} (${convictionCheck.maxConviction}/10${isUnacknowledged ? ' +3.0 unack' : ''}${alreadyRespondedToThem ? ' -2.0 dup' : ''} +${recencyBonus.toFixed(1)} recency = ${adjustedConviction.toFixed(1)}) for ${response.name}'s response`);
+                }
               }
             }
             
-            // Add to candidates if there's any reason to speak
-            if (highestConviction >= 6 || questionedBy) {
+            // Add to candidates if there's conviction or a direct question
+            if (highestConviction >= 7) { // Raised threshold for speed - only strong convictions speak
               candidateSpeakers.push({
                 character,
                 conviction: highestConviction,
                 temperament: character.temperament_score || 5,
-                triggeredBy: triggeredBy || questionedBy,
-                isQuestion: !!questionedBy
+                triggeredBy: bestTarget,
+                isQuestion: isDirectQuestion,
+                isUnacknowledgedTarget: isUnacknowledgedTarget
               });
+              
+              console.log(`🗣️ CANDIDATE SPEAKER: ${character.name} (conviction: ${highestConviction.toFixed(1)}) wants to respond to ${bestTarget?.name}${isUnacknowledgedTarget ? ' [UNACKNOWLEDGED]' : ''}`);
             }
           }
           
-          // Sort candidates by conviction level, then temperament
+          // Sort candidates: 1) Direct questions, 2) Unacknowledged targets, 3) Conviction, 4) Temperament
           candidateSpeakers.sort((a, b) => {
+            // Direct questions always win
+            if (a.isQuestion !== b.isQuestion) return a.isQuestion ? -1 : 1;
+            
+            // Prioritize unacknowledged targets (prevent ignoring speakers)
+            if (a.isUnacknowledgedTarget !== b.isUnacknowledgedTarget) {
+              return a.isUnacknowledgedTarget ? -1 : 1;
+            }
+            
+            // Then by conviction level
             if (a.conviction !== b.conviction) return b.conviction - a.conviction;
+            
+            // Finally by temperament
             return b.temperament - a.temperament;
           });
           
@@ -655,6 +928,12 @@ Respond as yourself:`;
               
               const contextString = fullConversationContext.length > 0 ? `\n\n${fullConversationContext.join('\n')}\n` : '';
               
+              // Build context of what others have said (for natural acknowledgment)
+              const othersContext = allResponses
+                .filter(r => r.characterId !== speaker.character.id && r.characterId !== speaker.triggeredBy.characterId)
+                .map(r => `${r.name} mentioned: "${r.content.substring(0, 80)}..."`)
+                .join('; ');
+
               const systemPrompt = `You are ${speaker.character.name}. 
 
 ${speaker.character.style}
@@ -663,16 +942,28 @@ CONVERSATION CONTEXT: ${contextString}
 
 WHAT JUST HAPPENED: ${prompt}
 
-CRITICAL INSTRUCTIONS:
-- You're responding directly to ${nickname} who just spoke
-- Address them by your nickname for them: "${nickname}, [your response]"
-- ${speaker.isQuestion ? 'Answer their question directly' : `React with conviction level ${speaker.conviction}/10`}
-- AVOID FORMULAIC LANGUAGE: Never start with "Ah," "Oh," "My dear," "My friend," "The question of whether," "Indeed," "Truly," "Verily"
-- VARY YOUR OPENINGS: Start directly with their nickname and your reaction, or jump straight into your point
-- Be authentic to your character and show genuine emotion - sound like a real person reacting
-- Build on what they said - agree, disagree, or expand their point naturally
-- React authentically as your character would - show your genuine beliefs and personality
-- 2-3 substantial sentences maximum
+${othersContext ? `OTHERS ALSO SPOKE: ${othersContext}` : ''}
+
+CRITICAL INSTRUCTIONS FOR REAL CONVERSATION:
+- START WITH THEIR NAME/NICKNAME: "${nickname}, [your response]" or "${nickname}! [reaction]"
+- ${speaker.isQuestion ? 'Answer their question directly' : `React with conviction level ${speaker.conviction}/10 - be passionate!`}
+- DISAGREE WHEN YOU DISAGREE: Don't be polite if you fundamentally disagree
+- USE "YOU" WHEN TALKING TO THEM: "You said..." not "They said..." or "One might argue..."
+- ${othersContext ? 'Address others by name too if relevant' : 'Focus on your main target'}
+
+BANNED FORMULAIC LANGUAGE:
+- "Your inquiry/words strike at..." "Indeed," "Truly," "I find myself..." "Allow me to..."
+- "One might say..." "It seems to me..." "In my experience..." "The question of whether..."
+
+SOUND LIKE A REAL PERSON TALKING:
+- "${nickname}, you're wrong because..."
+- "Wait, ${nickname}, that's not..."
+- "${nickname}! I completely disagree..."
+- "But ${nickname}, you're missing..."
+- "I hear what you're saying, ${nickname}, but..."
+
+Be passionate, direct, and conversational - like you're actually talking to someone!
+1-2 sentences maximum for speed.
 
 Respond to ${speaker.triggeredBy.name} now:`;
               
@@ -702,8 +993,15 @@ Respond to ${speaker.triggeredBy.name} now:`;
             }
           }
           
-          // If no one spoke or we're at the limit, end the round table
-          if (!someoneSpoke || totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES) {
+          // Early termination logic for speed optimization
+          if (!someoneSpoke) {
+            console.log(`⚡ EARLY TERMINATION: No speakers found for round ${currentRound} - ending discussion`);
+            roundTableActive = false;
+          } else if (totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES) {
+            console.log(`⚡ MESSAGE LIMIT REACHED: ${totalResponsesGenerated}/${MAX_ROUND_TABLE_MESSAGES} - ending discussion`);
+            roundTableActive = false;
+          } else if (currentRound >= 6 && candidateSpeakers.length === 0) {
+            console.log(`⚡ LOW ENGAGEMENT: No candidates after round ${currentRound} - ending discussion`);
             roundTableActive = false;
           }
           
@@ -712,10 +1010,12 @@ Respond to ${speaker.triggeredBy.name} now:`;
         
         // Add moderator intervention if we hit the 7-message limit
         if (totalResponsesGenerated >= MAX_ROUND_TABLE_MESSAGES) {
+          const moderatorMessage = generateDynamicModeratorMessage(allResponses);
+          
           const moderatorResponse = {
             characterId: 'moderator',
             name: 'Round Table Moderator',
-            content: `Thank you panelists, please give our guest a chance to speak.`,
+            content: moderatorMessage,
             timestamp: new Date().toISOString(),
             isModerator: true
           };
