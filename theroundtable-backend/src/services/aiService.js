@@ -19,6 +19,106 @@ try {
 }
 
 /**
+ * Classify the intent and expected response style for a message
+ */
+function classifyMessageIntent(message) {
+  const normalizedMessage = message.trim().toLowerCase();
+  
+  // Pattern categories for intent detection
+  const patterns = {
+    // Social/casual interactions that expect brief responses
+    casual_greeting: /^(yo|hey|hi|hello|sup|what's up|greetings?)(\s+(panel|everyone|folks|guys))?[!.\s]*$/i,
+    social_check_in: /how('s| is)? it going|what's up|how are you|how've you been|how was your day|nice weather/i,
+    simple_acknowledgment: /^(ok|sure|yeah|yep|thanks|got it|cool|alright)[\s!.]*$/i,
+    
+    // Deep/philosophical questions that expect full engagement
+    philosophical_question: /meaning|purpose|why do we|truth|justice|love|death|existence|god|universe|philosophy|believe in|think about|feel about|soul|consciousness|reality|ethics|morality/i,
+    substantial_inquiry: /what do you think about|tell me about|explain|discuss|thoughts on|opinion on|how do you view|what's your take/i,
+    personal_deep_question: /your beliefs|your philosophy|your experience|what drives you|what motivates|personal story|life story/i,
+    
+    // Simple factual questions (brief but informative responses)
+    simple_factual: /^(what\s+(is\s+)?(\d+\s*[\+\-\*\/]\s*\d+|\d+[\+\-\*\/]\d+)|(\d+\s*[\+\-\*\/]\s*\d+)|count\s+to\s+\d+|what.s\s+\d+\s*[\+\-\*\/]\s*\d+)(\?)?$/i,
+    basic_fact_request: /^(what|when|where|who)\s+(is|was|are|were)\s+[^?]*\??\s*$/i,
+    
+    // Topic-specific engagement (contextual response length)
+    topical_question: /about\s+(science|art|war|politics|religion|history|literature|music|philosophy|strategy|love|death|god|truth|justice|democracy|freedom|peace|education|knowledge)/i
+  };
+  
+  // Response style classification
+  let responseStyle = 'full_engagement'; // Default
+  let expectsSubstance = true;
+  let reasoning = 'Default to full engagement';
+  
+  // Check patterns in order of specificity
+  if (patterns.casual_greeting.test(normalizedMessage)) {
+    responseStyle = 'brief_friendly';
+    expectsSubstance = false;
+    reasoning = 'Casual greeting detected';
+  } else if (patterns.social_check_in.test(normalizedMessage)) {
+    responseStyle = 'brief_friendly';
+    expectsSubstance = false;
+    reasoning = 'Social check-in detected';
+  } else if (patterns.simple_acknowledgment.test(normalizedMessage)) {
+    responseStyle = 'brief_friendly';
+    expectsSubstance = false;
+    reasoning = 'Simple acknowledgment detected';
+  } else if (patterns.simple_factual.test(normalizedMessage)) {
+    responseStyle = 'brief_informative';
+    expectsSubstance = false;
+    reasoning = 'Simple factual question detected';
+  } else if (patterns.basic_fact_request.test(normalizedMessage) && normalizedMessage.length < 50) {
+    responseStyle = 'brief_informative';
+    expectsSubstance = false;
+    reasoning = 'Basic fact request detected';
+  } else if (patterns.philosophical_question.test(normalizedMessage)) {
+    responseStyle = 'full_engagement';
+    expectsSubstance = true;
+    reasoning = 'Philosophical question detected';
+  } else if (patterns.substantial_inquiry.test(normalizedMessage)) {
+    responseStyle = 'full_engagement';
+    expectsSubstance = true;
+    reasoning = 'Substantial inquiry detected';
+  } else if (patterns.personal_deep_question.test(normalizedMessage)) {
+    responseStyle = 'full_engagement';
+    expectsSubstance = true;
+    reasoning = 'Personal deep question detected';
+  } else if (patterns.topical_question.test(normalizedMessage)) {
+    responseStyle = 'moderate_engagement';
+    expectsSubstance = true;
+    reasoning = 'Topic-specific question detected';
+  }
+  
+  // Additional context analysis
+  const hasQuestionWords = /what|why|how|when|where|who|which|would|could|should|do you|can you|will you/i.test(normalizedMessage);
+  const isShortMessage = normalizedMessage.length <= 20;
+  const hasComplexStructure = normalizedMessage.split(/[.!?]/).length > 1;
+  
+  // Override for edge cases
+  if (hasQuestionWords && hasComplexStructure && normalizedMessage.length > 100) {
+    responseStyle = 'full_engagement';
+    expectsSubstance = true;
+    reasoning += ' (complex multi-part question override)';
+  } else if (!hasQuestionWords && isShortMessage && !patterns.philosophical_question.test(normalizedMessage)) {
+    responseStyle = 'brief_friendly';
+    expectsSubstance = false;
+    reasoning += ' (short non-question override)';
+  }
+  
+  const result = {
+    responseStyle,
+    expectsSubstance,
+    reasoning,
+    messageLength: message.length,
+    hasQuestionWords,
+    isShortMessage,
+    hasComplexStructure
+  };
+  
+  console.log(`🎯 INTENT CLASSIFICATION: "${message.substring(0, 50)}..." → ${responseStyle} (${reasoning})`);
+  return result;
+}
+
+/**
  * Analyze text for topics that might trigger character convictions
  */
 function analyzeTopics(text) {
@@ -236,6 +336,10 @@ async function generateOpenAIResponse(character, message, context = {}) {
     console.log(`🔥 GENERATING RESPONSE FOR ${character.name} using OpenAI...`);
     console.log(`🔥 CHARACTER STYLE: ${character.style?.substring(0, 100)}...`);
     
+    // Classify message intent for response calibration
+    const intentClassification = classifyMessageIntent(message);
+    console.log(`🎯 INTENT for ${character.name}: ${intentClassification.responseStyle}`);
+    
     // Handle both old and new context formats for backwards compatibility
     let contextText = '';
     let fullConversationText = '';
@@ -270,6 +374,21 @@ async function generateOpenAIResponse(character, message, context = {}) {
       console.log(`🔥 DEBUG - Context preview: ${contextText.substring(0, 200)}...`);
     }
     
+    // Generate response style instructions based on intent classification
+    const getResponseStyleInstructions = (intentClass) => {
+      switch (intentClass.responseStyle) {
+        case 'brief_friendly':
+          return 'RESPONSE STYLE: Brief and friendly (1-2 sentences max). This is casual conversation - acknowledge naturally, stay in character, but don\'t lecture or elaborate extensively.';
+        case 'brief_informative':
+          return 'RESPONSE STYLE: Brief but informative (1-2 sentences). Give the direct answer plus one characteristic personal comment. Stay in character without over-explaining.';
+        case 'moderate_engagement':
+          return 'RESPONSE STYLE: Moderate engagement (2-3 sentences). Share your perspective on the topic while staying conversational and focused.';
+        case 'full_engagement':
+        default:
+          return 'RESPONSE STYLE: Full engagement (2-4 sentences). This is a substantial topic - engage fully with your character\'s depth and perspective.';
+      }
+    };
+
     // Create dynamic system prompt based on character and context  
     let systemContent = '';
     
@@ -286,7 +405,8 @@ ${fullConversationText ? `CONVERSATION HISTORY:\n${fullConversationText}\n\n` : 
 - VARY YOUR OPENINGS: Start directly with your point, a personal anecdote, a question back, or immediate reaction
 - Sound like a real person in conversation, not delivering a formal lecture
 - Be conversational but distinctive to your character - show your personality and beliefs naturally
-- ${context.isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Keep responses engaging and focused (2-4 sentences)'}
+
+${getResponseStyleInstructions(intentClassification)}
 
 YOUR VOICE & STYLE: ${character.style}
 
@@ -315,6 +435,8 @@ CRITICAL RULES FOR GROUP DISCUSSION:
 - DISAGREE OR DEBATE: Don't just be polite - have real opinions and clash when you disagree
 - INTERRUPT THE FLOW: Jump in with "Wait, [Name]..." or "But [Nickname], you're missing..."
 - BE CONVERSATIONAL: Use "you" when talking to others, not "the Emperor" or "one might say"
+
+${getResponseStyleInstructions(intentClassification)}
 
 BANNED FORMULAIC PHRASES:
 - "Your inquiry strikes at..." "Your words strike at..." "Your question touches upon..."
@@ -353,6 +475,8 @@ SOUND LIKE A REAL PERSON TALKING:
 - "Building on what [Name] said..."
 - "[Name], how can you say...?"
 
+${getResponseStyleInstructions(intentClassification)}
+
 BANNED FORMULAIC PHRASES - NEVER USE:
 - "Your inquiry strikes at..." "Your words strike at..." "Your question touches upon..."
 - "Indeed," "Truly," "Verily," "Ah," "Oh," "My dear friend"
@@ -369,7 +493,6 @@ RELATIONSHIP REQUIREMENTS:
 CONVERSATION RULES:
 - Sound like you're in an actual argument/discussion, not giving a speech
 - Be conversational but stay authentic to your character
-- ${context.isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Keep responses conversational and engaging (2-4 sentences max)'}
 
 YOUR VOICE & STYLE: ${character.style}
 
@@ -387,7 +510,8 @@ ${fullConversationText ? `CONVERSATION HISTORY:\n${fullConversationText}\n\n` : 
 - VARY YOUR OPENINGS: Start directly with your point, a personal anecdote, a question back, or immediate reaction
 - Sound like a real person in conversation, not delivering a formal lecture
 - Be conversational but distinctive to your character - show your personality and beliefs naturally
-- ${context.isSimpleFactual ? 'CONTEXT: This is a simple factual question in casual conversation. Stay in character but be appropriately brief - give the direct answer plus one brief personal comment. Even you wouldn\'t lecture about 2+2.' : 'Keep responses engaging and focused (2-4 sentences)'}
+
+${getResponseStyleInstructions(intentClassification)}
 
 YOUR VOICE & STYLE: ${character.style}
 
@@ -473,5 +597,6 @@ module.exports = {
   analyzeTopics,
   checkConvictions,
   generateConvictionResponse,
-  getRelationshipContext
+  getRelationshipContext,
+  classifyMessageIntent
 };

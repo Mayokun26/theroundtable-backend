@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { generateResponse, analyzeTopics, checkConvictions, generateConvictionResponse } = require('../services/aiService');
+const { generateResponse, analyzeTopics, checkConvictions, generateConvictionResponse, classifyMessageIntent } = require('../services/aiService');
 const characters = require('../data/characters');
 
 // In-memory store for conversations (in a real app, this would be a database)
@@ -129,8 +129,8 @@ router.post('/', async (req, res) => {
           });
         }
         
-        // Check if this is a simple factual question that warrants brief responses
-        const isSimpleFactual = /^(what\s+(is\s+)?(\d+\s*[\+\-\*\/]\s*\d+|\d+[\+\-\*\/]\d+)|(\d+\s*[\+\-\*\/]\s*\d+)|count\s+to\s+\d+|what.s\s+\d+\s*[\+\-\*\/]\s*\d+)(\?)?$/i.test(message.trim());
+        // Classify message intent for response calibration
+        const intentClassification = classifyMessageIntent(message);
         
         console.log(`📜 EXPRESS ROUTE - Processing ${character.name} for message: "${message.slice(0, 50)}..."`);
         
@@ -144,7 +144,7 @@ router.post('/', async (req, res) => {
             originalQuestion: message,
             allPanelists: allPanelists.filter(p => p.id !== panelist.id),
             fullConversationContext: fullConversationContext,
-            isSimpleFactual: isSimpleFactual,
+            intentClassification: intentClassification,
             isFirstSpeaker: true
           };
         } else {
@@ -160,7 +160,7 @@ router.post('/', async (req, res) => {
             originalQuestion: message,
             allPanelists: allPanelists.filter(p => p.id !== panelist.id),
             fullConversationContext: fullConversationContext,
-            isSimpleFactual: isSimpleFactual,
+            intentClassification: intentClassification,
             isFirstSpeaker: false,
             previousResponses: previousResponses,
             speakerIndex: i
