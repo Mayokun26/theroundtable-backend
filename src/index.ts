@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { createServer } from './server';
 import { logger } from './utils/logger';
-import { connectDB } from './config/database';
+import { checkDynamoDBConnection } from './config/dynamodb';
 import { createRedisClient, isRedisEnabled } from './config/redis';
 
 dotenv.config();
@@ -10,9 +10,13 @@ const port = process.env.PORT || 3001;
 
 async function startServer() {
   try {
-    // Connect to MongoDB
-    await connectDB();
-    logger.info('Connected to MongoDB');
+    // Connect to DynamoDB
+    const dynamoConnected = await checkDynamoDBConnection();
+    if (!dynamoConnected) {
+      logger.error('Failed to connect to DynamoDB');
+      process.exit(1);
+    }
+    logger.info('Connected to DynamoDB');
 
     // Initialize Redis - but don't stop if it fails
     try {
