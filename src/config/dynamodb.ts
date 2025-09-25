@@ -18,12 +18,14 @@ export const TableNames = {
   MESSAGES: `${process.env.PROJECT_NAME || 'theroundtable'}-messages-${process.env.ENVIRONMENT || 'dev'}`
 };
 
+import { DescribeTableCommand } from '@aws-sdk/client-dynamodb';
+
 export async function checkDynamoDBConnection(): Promise<boolean> {
   try {
     // Try to describe one of our tables to check connection
-    await client.send({
+    await client.send(new DescribeTableCommand({
       TableName: TableNames.USERS
-    });
+    }));
     logger.info('DynamoDB connected successfully');
     return true;
   } catch (error) {
