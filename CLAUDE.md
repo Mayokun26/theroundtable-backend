@@ -6,13 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **🚨 CRITICAL: COMMIT AND PUSH FREQUENTLY 🚨**
 
+**IMPORTANT CAPABILITY**: Claude Code CAN and SHOULD push commits directly from WSL to GitHub. This works perfectly for this repository. The git push command executes successfully from WSL.
+
 Claude Code MUST follow this workflow for every change:
 
 ```bash
 # After ANY meaningful change (no matter how small):
 git add .
 git commit -m "descriptive message"
-git push origin main
+git push origin main  # This WORKS from WSL - use it!
 
 # Commit triggers (ALWAYS commit after):
 # - Adding/modifying any file
@@ -65,8 +67,8 @@ git push origin main
 - Small utility commands
 
 **Large Operations**: Still provide PowerShell commands to avoid token inefficiency:
-- npm builds (npm run build, npm run deploy) 
-- git push operations (due to WSL networking timeout with 262MB+ repos)
+- npm builds (npm run build, npm run deploy)
+- ~~git push operations~~ (CORRECTION: Git push WORKS from WSL for this repo!)
 - Complex deployment workflows
 - Lambda packaging and deployment
 
