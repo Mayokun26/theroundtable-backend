@@ -648,11 +648,11 @@ npm run deploy
 - ⏳ **App Store Submission** - EAS build → App Store Connect → Review
 - ⏳ **Production Launch** - Live on iOS App Store
 
-**DEVELOPMENT PRIORITY**:
-- **Primary Focus (60%)**: Completing App Store launch for portfolio impact
+**CAREER TRANSITION PRIORITY**:
+- **Primary Focus (60%)**: Completing App Store launch for maximum portfolio impact
 - **Secondary Focus (40%)**: Building MLOps betting market predictor ("better" repo)
-- **Timeline**: Focus on production-ready implementations
-- **Current Goals**: Demonstrate comprehensive development capabilities
+- **Timeline**: 3-6 months to land $420k MLOps role
+- **Current Situation**: $360k across 3 DevOps jobs → Target $420k (keep 1 favorite + 1 new MLOps)
 
 **APP STORE SUCCESS METRICS**:
 - Demonstrates full mobile development lifecycle (React Native → App Store)
@@ -677,4 +677,50 @@ npm install -g @expo/eas-cli
 eas login
 eas build --platform ios --profile production
 eas submit --platform ios
+```
+
+## TEMPORARY - Current Issues Being Fixed (REMOVE AFTER RESOLUTION)
+
+**Issues identified in last conversation that need fixing:**
+
+### 1. Einstein Duplicate Response Bug
+- **Problem**: Einstein responds twice - once normally and once as "⚡ Reacting"
+- **Root Cause**: Character selection logic allows same character to be added multiple times
+- **File**: `/routes/conversations.ts` lines 154-173
+- **Fix**: Add duplicate prevention filters in selectRespondingCharacters function
+
+### 2. Bracket Notation Bug
+- **Problem**: Prompts show "[Shakespeare]" instead of actual names like "Shakespeare"
+- **Seen in**: AI responses saying "Wait, [Shakespeare]..."
+- **File**: `/services/aiService.js` lines 737-741, 765-769, 793-797
+- **Fix**: Change prompt examples from "[Name]" to actual name examples
+
+### 3. Character Voice Distinctiveness
+- **Problem**: All characters sound too similar, not maintaining unique voices
+- **File**: `/services/aiService.js` - needs stronger emphasis on character.style
+- **Fix**: Enhanced prompts with "CRITICAL - YOUR UNIQUE VOICE" and "STAY IN CHARACTER AS [NAME]!"
+
+### 4. Memory System Integration
+- **Added**: `conversationMemory.js` service for tracking unanswered questions
+- **Modified**: `conversations.ts` to use memory service
+- **Purpose**: Ensure questions don't get ignored (e.g., Leonardo asking Marie about radium)
+
+### 5. Gender Mismatch Detection
+- **Status**: Already implemented but may need testing
+- **Logic**: Detects "ladies" said to all-male panel or "gentlemen" to female panel
+- **Response**: One excluded character corrects the assumption
+
+**Files Modified in WSL (need syncing to Windows):**
+- `/home/user/work/theroundtable/theroundtable-backend/src/services/aiService.js`
+- `/home/user/work/theroundtable/theroundtable-backend/src/routes/conversations.ts`
+- `/home/user/work/theroundtable/theroundtable-backend/src/services/conversationMemory.js` (NEW)
+
+**Deployment Command After Fixes:**
+```powershell
+cd "C:\Users\Oreko\work\theroundtable\theroundtable-backend"
+npm run build:lambda
+cd dist
+del lambda.zip -Force
+Compress-Archive -Path * -DestinationPath lambda.zip -Force
+aws lambda update-function-code --function-name theroundtable-backend-dev --zip-file fileb://lambda.zip
 ```
