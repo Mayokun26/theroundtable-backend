@@ -16,7 +16,8 @@ function isSimpleGreeting(message: string): boolean {
   const trimmed = message.trim().toLowerCase();
   const greetingPatterns = [
     /^(hi|hey|hello|greetings?|morning|afternoon|evening|good (morning|afternoon|evening|day)|howdy|yo|sup|what'?s up)[\s,!.]*$/i,
-    /^(hi|hey|hello|greetings?|morning|afternoon|evening|good (morning|afternoon|evening|day)) (everyone|all|folks|gentlemen|ladies|friends?)[\s,!.]*$/i,
+    // Allow typos in common group terms (gentlemen -> genetlmen, everyone -> evryone, etc)
+    /^(hi|hey|hello|greetings?|morning|afternoon|evening|good (morning|afternoon|evening|day)) (everyone|all|folks|gentlem[ae]n|gentlmen|genetlmen|gentelmen|lad(y|ies)|girls?|friends?)[\s,!.]*$/i,
     /^(thanks?|thank you|bye|goodbye|see ya|cheers|nice (talking|chatting|speaking))[\s,!.]*$/i
   ];
   return greetingPatterns.some(pattern => pattern.test(trimmed));
@@ -47,10 +48,14 @@ function analyzeMessageTargeting(message: string, availableCharacterIds: string[
     charactersOnPanel: availableChars.map(c => `${c.name} (${c.gender})`).join(', ')
   });
 
-  if (hasFemales && /\b(gentlemen|sirs?|boys|lads|gents|guys)\b/i.test(messageLower)) {
+  // More flexible gender term matching (allows for typos)
+  const maleTerms = /\b(gentlem[ae]n|gentlmen|genetlmen|gentelmen|sirs?|boys|lads|gents|guys)\b/i;
+  const femaleTerms = /\b(lad(y|ies)|girls?|madams?|gals?)\b/i;
+
+  if (hasFemales && maleTerms.test(messageLower)) {
     console.log(`⚠️ GENDER MISMATCH DETECTED: Male-gendered greeting with females present`);
     targetingAnalysis.genderMismatch = { type: 'excluded_women', excludedGenders: ['female'] };
-  } else if (hasMales && /\b(ladies|girls|madams?|gals)\b/i.test(messageLower)) {
+  } else if (hasMales && femaleTerms.test(messageLower)) {
     console.log(`⚠️ GENDER MISMATCH DETECTED: Female-gendered greeting with males present`);
     targetingAnalysis.genderMismatch = { type: 'excluded_men', excludedGenders: ['male'] };
   }
