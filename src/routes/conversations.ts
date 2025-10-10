@@ -219,7 +219,14 @@ function selectRespondingCharacters(targeting: any, allCharacters: any[], availa
     }
   }
 
-  return [...new Set(responding)]; // Remove duplicates as final safeguard
+  const finalResponders = [...new Set(responding)]; // Remove duplicates as final safeguard
+  console.log(`🔚 selectRespondingCharacters returning:`, {
+    original_count: responding.length,
+    final_count: finalResponders.length,
+    had_duplicates: responding.length !== finalResponders.length,
+    responders: finalResponders.map(id => allCharacters.find(c => c.id === id)?.name)
+  });
+  return finalResponders;
 }
 
 // Character data is now imported from the characters.js file
@@ -241,10 +248,14 @@ conversationRoutes.post('/', async (req, res) => {
     const respondingCharacters = selectRespondingCharacters(targeting, require('../data/characters'), characters);
 
     const charactersData = require('../data/characters');
+
+    console.log(`\n${'='.repeat(80)}`);
     console.log(`📊 TARGETING ANALYSIS:`);
     console.log(`  Directly addressed: ${targeting.directlyAddressed.map((id: string) => charactersData.find((c: any) => c.id === id)?.name).join(', ') || 'none'}`);
     console.log(`  High conviction triggers: ${Array.from(targeting.topicTriggers.entries()).filter(([_, c]) => (c as number) >= 9).map(([id, c]) => `${charactersData.find((char: any) => char.id === id)?.name}(${c})`).join(', ') || 'none'}`);
     console.log(`  Selected responders: ${respondingCharacters.map((id: string) => charactersData.find((c: any) => c.id === id)?.name).join(', ')}`);
+    console.log(`  Responder IDs (checking for duplicates): [${respondingCharacters.join(', ')}]`);
+    console.log(`  Unique count: ${new Set(respondingCharacters).size} / Total count: ${respondingCharacters.length}`);
     
     // Generate responses for each character
     const responses = [];
@@ -253,11 +264,13 @@ conversationRoutes.post('/', async (req, res) => {
     for (const characterId of respondingCharacters) {
       // Prevent duplicate responses from same character
       if (processedCharacters.has(characterId)) {
-        console.log(`⚠️ Skipping duplicate response from ${characterId}`);
+        const charName = charactersData.find((c: any) => c.id === characterId)?.name;
+        console.log(`⚠️ DUPLICATE DETECTED! Skipping duplicate response from ${charName} (ID: ${characterId})`);
         continue;
       }
       processedCharacters.add(characterId);
       const character = charactersData.find((char: any) => char.id === characterId);
+      console.log(`\n🎭 Generating response for: ${character?.name} (ID: ${characterId})`);
       if (!character) {
         continue; // Skip unknown characters
       }
