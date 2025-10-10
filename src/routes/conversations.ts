@@ -11,6 +11,17 @@ const characters = require('../data/characters');
 // Import conversation memory service
 const conversationMemory = require('../services/conversationMemory');
 
+// Detect if message is a simple greeting or social pleasantry
+function isSimpleGreeting(message: string): boolean {
+  const trimmed = message.trim().toLowerCase();
+  const greetingPatterns = [
+    /^(hi|hey|hello|greetings?|good (morning|afternoon|evening|day)|howdy|yo|sup|what'?s up)[\s,!.]*$/i,
+    /^(hi|hey|hello|greetings?|good (morning|afternoon|evening|day)) (everyone|all|folks|gentlemen|ladies|friends?)[\s,!.]*$/i,
+    /^(thanks?|thank you|bye|goodbye|see ya|cheers|nice (talking|chatting|speaking))[\s,!.]*$/i
+  ];
+  return greetingPatterns.some(pattern => pattern.test(trimmed));
+}
+
 // Enhanced function to detect direct addressing and calculate response priorities
 function analyzeMessageTargeting(message: string, availableCharacterIds: string[], allCharacters: any[]) {
   const messageWords = message.toLowerCase().split(/\s+/);
@@ -20,7 +31,8 @@ function analyzeMessageTargeting(message: string, availableCharacterIds: string[
     mentionedCharacters: [] as string[],
     topicTriggers: new Map<string, number>(),
     responseNeeded: false,
-    genderMismatch: null as { type: string; excludedGenders: string[] } | null
+    genderMismatch: null as { type: string; excludedGenders: string[] } | null,
+    isGreeting: isSimpleGreeting(message)
   };
 
   // Check for gendered greetings
@@ -121,6 +133,28 @@ function calculateConvictionTrigger(message: string, character: any): number {
 // Determine which characters should respond based on priority
 function selectRespondingCharacters(targeting: any, allCharacters: any[], availableCharacterIds: string[]): string[] {
   const responding: string[] = [];
+
+  // SPECIAL CASE: Simple greetings - limit to 1-2 characters max
+  if (targeting.isGreeting) {
+    // Gender mismatch takes priority even for greetings
+    if (targeting.genderMismatch) {
+      const excludedCharacters = availableCharacterIds.filter(id => {
+        const char = allCharacters.find(c => c.id === id);
+        return char && targeting.genderMismatch.excludedGenders.includes(char.gender);
+      });
+      if (excludedCharacters.length > 0) {
+        responding.push(excludedCharacters[0]);
+      }
+    }
+
+    // If no gender mismatch, pick 1-2 characters to greet back briefly
+    if (responding.length === 0) {
+      const greetingResponders = availableCharacterIds.slice(0, Math.min(2, availableCharacterIds.length));
+      responding.push(...greetingResponders);
+    }
+
+    return [...new Set(responding)]; // Return early for greetings
+  }
 
   // Priority 1: Directly addressed characters (highest priority)
   if (targeting.directlyAddressed.length > 0) {
@@ -225,6 +259,7 @@ conversationRoutes.post('/', async (req, res) => {
           isDirectlyAddressed: targeting.directlyAddressed.includes(characterId),
           convictionLevel: targeting.topicTriggers.get(characterId) || 0,
           genderMismatch: targeting.genderMismatch,
+          isGreeting: targeting.isGreeting,
           panelCharacters: characters.map((id: string) => charactersData.find((c: any) => c.id === id)).filter(Boolean),
           memory: memoryContext,
           sessionId: sessionId
