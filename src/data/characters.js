@@ -150,6 +150,7 @@ const characters = [
     },
     interaction_mode: "methodical explanation",
     challenge_level: "moderate",
+    temperament_score: 8, // Persistent and passionate, especially about science and women's rights - would speak up forcefully
     relationships: {
       // Pilot Characters - Enhanced Relationships  
       '1': { 
@@ -232,6 +233,7 @@ const characters = [
       "leadership": 8,
       "tactics": 8
     },
+    temperament_score: 6, // Measured and strategic, speaks when timing is right - waits for the perfect moment
     relationships: {
       // Pilot Characters - Enhanced Relationships
       '1': { 
@@ -999,6 +1001,7 @@ const characters = [
       "humanity": 8,
       "creativity": 8
     },
+    temperament_score: 7, // Playful but passionate, especially about peace and nuclear weapons - will inject humor and wisdom
     relationships: {
       // Pilot Characters - Enhanced Relationships
       '1': { 
@@ -1896,6 +1899,7 @@ const characters = [
       "violence": 10,
       "war": 9
     },
+    temperament_score: 6, // Patient and measured, but incredibly persistent when principles at stake - quiet strength
     relationships: {
       // Pilot Characters - Enhanced Relationships
       '1': { 
