@@ -542,9 +542,9 @@ async function generateOpenAIResponse(character, message, context = {}) {
   try {
     console.log(`🔥 GENERATING RESPONSE FOR ${character.name} using OpenAI...`);
     console.log(`🔥 CHARACTER STYLE: ${character.style?.substring(0, 100)}...`);
-    
+
     // Classify message intent for response calibration
-    const intentClassification = classifyMessageIntent(message);
+    let intentClassification = classifyMessageIntent(message);
     console.log(`🎯 INTENT for ${character.name}: ${intentClassification.responseStyle}`);
     
     // Handle enhanced context structure from new conversation system
@@ -555,6 +555,7 @@ async function generateOpenAIResponse(character, message, context = {}) {
     let convictionLevel = 0;
     let panelCharacters = [];
     let genderMismatch = null;
+    let isGreetingFromContext = false;
 
     if (Array.isArray(context)) {
       // Old format - just previous responses
@@ -578,6 +579,23 @@ async function generateOpenAIResponse(character, message, context = {}) {
       panelCharacters = panel;
       othersContext = others;
       genderMismatch = context.genderMismatch || null;
+
+      // Extract isGreeting flag from context (passed from conversations.ts)
+      isGreetingFromContext = context.isGreeting || false;
+
+      // Override intent classification if conversations.ts detected a greeting
+      if (isGreetingFromContext && intentClassification.responseStyle !== 'brief_friendly') {
+        console.log(`🔄 OVERRIDING INTENT: conversations.ts detected greeting, forcing brief_friendly style`);
+        intentClassification = {
+          responseStyle: 'brief_friendly',
+          expectsSubstance: false,
+          reasoning: 'Greeting detected by conversations.ts routing logic',
+          messageLength: message.length,
+          hasQuestionWords: false,
+          isShortMessage: true,
+          hasComplexStructure: false
+        };
+      }
 
       // Build context from previous responses in this round
       if (previousResponses.length > 0) {
