@@ -40,9 +40,18 @@ function analyzeMessageTargeting(message: string, availableCharacterIds: string[
   const hasFemales = availableChars.some(c => c.gender === 'female');
   const hasMales = availableChars.some(c => c.gender === 'male');
 
+  console.log(`🔍 GENDER MISMATCH CHECK:`, {
+    hasFemales,
+    hasMales,
+    message: messageLower,
+    charactersOnPanel: availableChars.map(c => `${c.name} (${c.gender})`).join(', ')
+  });
+
   if (hasFemales && /\b(gentlemen|sirs?|boys|lads|gents|guys)\b/i.test(messageLower)) {
+    console.log(`⚠️ GENDER MISMATCH DETECTED: Male-gendered greeting with females present`);
     targetingAnalysis.genderMismatch = { type: 'excluded_women', excludedGenders: ['female'] };
   } else if (hasMales && /\b(ladies|girls|madams?|gals)\b/i.test(messageLower)) {
+    console.log(`⚠️ GENDER MISMATCH DETECTED: Female-gendered greeting with males present`);
     targetingAnalysis.genderMismatch = { type: 'excluded_men', excludedGenders: ['male'] };
   }
 
@@ -136,12 +145,16 @@ function selectRespondingCharacters(targeting: any, allCharacters: any[], availa
 
   // SPECIAL CASE: Simple greetings - limit to 1-2 characters max
   if (targeting.isGreeting) {
+    console.log(`👋 GREETING DETECTED - Limiting responses`);
+
     // Gender mismatch takes priority even for greetings
     if (targeting.genderMismatch) {
+      console.log(`⚠️ Processing gender mismatch for greeting:`, targeting.genderMismatch);
       const excludedCharacters = availableCharacterIds.filter(id => {
         const char = allCharacters.find(c => c.id === id);
         return char && targeting.genderMismatch.excludedGenders.includes(char.gender);
       });
+      console.log(`👤 Excluded characters who should respond:`, excludedCharacters.map(id => allCharacters.find(c => c.id === id)?.name));
       if (excludedCharacters.length > 0) {
         responding.push(excludedCharacters[0]);
       }
@@ -149,10 +162,12 @@ function selectRespondingCharacters(targeting: any, allCharacters: any[], availa
 
     // If no gender mismatch, pick 1-2 characters to greet back briefly
     if (responding.length === 0) {
+      console.log(`📝 No gender mismatch - selecting 1-2 random responders`);
       const greetingResponders = availableCharacterIds.slice(0, Math.min(2, availableCharacterIds.length));
       responding.push(...greetingResponders);
     }
 
+    console.log(`✅ Greeting response selection complete:`, responding.map(id => allCharacters.find(c => c.id === id)?.name));
     return [...new Set(responding)]; // Return early for greetings
   }
 
