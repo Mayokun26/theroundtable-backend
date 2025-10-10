@@ -125,4 +125,5 @@ coverage/
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
-yarn-error.log
+yarn-error.logCLAUDE.md
+.claudeignore
