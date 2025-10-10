@@ -15,8 +15,8 @@ const conversationMemory = require('../services/conversationMemory');
 function isSimpleGreeting(message: string): boolean {
   const trimmed = message.trim().toLowerCase();
   const greetingPatterns = [
-    /^(hi|hey|hello|greetings?|good (morning|afternoon|evening|day)|howdy|yo|sup|what'?s up)[\s,!.]*$/i,
-    /^(hi|hey|hello|greetings?|good (morning|afternoon|evening|day)) (everyone|all|folks|gentlemen|ladies|friends?)[\s,!.]*$/i,
+    /^(hi|hey|hello|greetings?|morning|afternoon|evening|good (morning|afternoon|evening|day)|howdy|yo|sup|what'?s up)[\s,!.]*$/i,
+    /^(hi|hey|hello|greetings?|morning|afternoon|evening|good (morning|afternoon|evening|day)) (everyone|all|folks|gentlemen|ladies|friends?)[\s,!.]*$/i,
     /^(thanks?|thank you|bye|goodbye|see ya|cheers|nice (talking|chatting|speaking))[\s,!.]*$/i
   ];
   return greetingPatterns.some(pattern => pattern.test(trimmed));
