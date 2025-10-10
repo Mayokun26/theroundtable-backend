@@ -26,8 +26,8 @@ function classifyMessageIntent(message) {
   
   // Pattern categories for intent detection
   const patterns = {
-    // Social/casual interactions that expect brief responses
-    casual_greeting: /^(yo|hey|hi|hello|sup|what's up|greetings?|good\s+(morning|afternoon|evening|day))\s*(panel|everyone|folks|guys|gentlemen|ladies|all)?[!.\s]*$/i,
+    // Social/casual interactions that expect brief responses (with typo tolerance)
+    casual_greeting: /^(yo|hey|hi|hello|sup|what's up|greetings?|morning|afternoon|evening|good\s+(morning|afternoon|evening|day))\s*(panel|everyone|folks|guys|gentlem[ae]n|gentlmen|genetlmen|gentelmen|lad(y|ies)|girls?|all|friends?)?[!.\s]*$/i,
     social_check_in: /how('s| is)? it going|what's up|how are you|how've you been|how was your day|nice weather/i,
     simple_acknowledgment: /^(ok|sure|yeah|yep|thanks|got it|cool|alright)[\s!.]*$/i,
     
