@@ -1,87 +1,70 @@
 # TheRoundTable Backend
 
-This is the backend service for TheRoundTable application, built with Node.js, TypeScript, and Express.
+Backend service for TheRoundTable panel-conversation app.
 
-## 🚀 Technology Stack
+## Stack
+- Node.js + TypeScript
+- Express (HTTP runtime)
+- AWS Lambda handler (same core services as HTTP)
+- OpenAI (response generation)
+- Redis (session memory, with in-memory fallback)
+- DynamoDB (connectivity + table naming config)
 
-- Node.js
-- TypeScript
-- Express.js
-- DynamoDB
-- Redis
-- AWS Services (Cognito, ECS, etc.)
+## Core Behavior
+- Dynamic response style by user intent (`brief_friendly`, `brief_informative`, `moderate_engagement`, `full_engagement`).
+- Character targeting and responder selection (direct address, conviction triggers, greeting behavior).
+- Character-to-character interaction in generated panel responses.
+- Session memory persisted in Redis when available.
 
-## 📋 Prerequisites
-
-- Node.js 14+
-- Redis
-- AWS Account and configured credentials
-- TypeScript
-
-## 🔧 Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/Mayokun26/theroundtable-backend.git
-```
-
-2. Install dependencies:
+## Setup
 ```bash
 npm install
+cp .env.example .env
 ```
 
-3. Create a `.env` file in the root directory with the following variables:
-```
-AWS_REGION=your-aws-region
-REDIS_HOST=your-redis-host
-REDIS_PORT=your-redis-port
-OPENAI_API_KEY=your-openai-api-key
-```
-
-4. Build the TypeScript code:
-```bash
-npm run build
-```
-
-## 🚀 Running the Application
-
-Development mode:
+## Run
 ```bash
 npm run dev
 ```
 
-Production mode:
+## Build
 ```bash
-npm run start
+npm run build
 ```
 
-## 📁 Project Structure
+## Test
+```bash
+npm test
+npm run type-check
+npm run build
+```
 
-- `/src` - Source code
-  - `/config` - Configuration files
-  - `/routes` - API routes
-  - `/middleware` - Express middleware
-  - `/services` - Business logic
-  - `/utils` - Utility functions
+## Quality Gate
+```bash
+npm run ci
+```
 
-## 🔒 Security
+This runs lint, type-check, coverage-enforced tests, and build.
 
-- All sensitive information is stored in environment variables
-- AWS credentials are managed through AWS SDK
-- Input validation and sanitization implemented
-- Rate limiting enabled
-- CORS configured for frontend domains
+### Live E2E (OpenAI + Redis)
+- Requires `OPENAI_API_KEY` and `REDIS_URL`.
+- Runs real provider/dependency tests.
 
-## 🛠️ API Endpoints
+```bash
+npm run test:live:required
+```
 
-- `/api/health` - Health check endpoint
-- `/api/characters` - Character management
-- `/api/conversations` - Conversation management
+## CI
+- GitHub Actions workflow: `.github/workflows/ci.yml`
+- Triggered on PRs and pushes to `main` and `codex/**` branches.
 
-## 📦 Deployment
+## API
+- `GET /api/health`
+- `GET /api/characters`
+- `GET /api/characters/:id`
+- `POST /api/conversations`
 
-The application is containerized using Docker and can be deployed to AWS ECS.
-
-## 🔄 CI/CD
-
-Continuous integration and deployment is handled through AWS CodePipeline.
+## Lambda Path Parity
+Lambda handler supports both prefixed and unprefixed paths:
+- `/api/conversations` and `/conversations`
+- `/api/characters` and `/characters`

@@ -1,4 +1,7 @@
 import winston from 'winston';
+import { getEnv } from '../config/env';
+
+const env = getEnv();
 
 // Create transports based on environment
 const transports: winston.transport[] = [
@@ -12,7 +15,7 @@ const transports: winston.transport[] = [
 ];
 
 // Only add file transports if not running in Lambda
-if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+if (!env.AWS_LAMBDA_FUNCTION_NAME) {
   transports.push(
     new winston.transports.File({ 
       filename: 'logs/error.log', 
@@ -26,7 +29,8 @@ if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
 
 // Create a winston logger
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: env.LOG_LEVEL,
+  silent: env.NODE_ENV === 'test',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()

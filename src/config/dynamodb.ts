@@ -1,21 +1,28 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { logger } from '../utils/logger';
+import { getEnv } from './env';
+
+const env = getEnv();
 
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-  }
+  region: env.AWS_REGION,
+  ...(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY
+    ? {
+        credentials: {
+          accessKeyId: env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+        },
+      }
+    : {}),
 });
 
 export const dynamoDB = DynamoDBDocumentClient.from(client);
 
 export const TableNames = {
-  USERS: `${process.env.PROJECT_NAME || 'theroundtable'}-users-${process.env.ENVIRONMENT || 'dev'}`,
-  CONVERSATIONS: `${process.env.PROJECT_NAME || 'theroundtable'}-conversations-${process.env.ENVIRONMENT || 'dev'}`,
-  MESSAGES: `${process.env.PROJECT_NAME || 'theroundtable'}-messages-${process.env.ENVIRONMENT || 'dev'}`
+  USERS: `${env.PROJECT_NAME}-users-${env.ENVIRONMENT}`,
+  CONVERSATIONS: `${env.PROJECT_NAME}-conversations-${env.ENVIRONMENT}`,
+  MESSAGES: `${env.PROJECT_NAME}-messages-${env.ENVIRONMENT}`,
 };
 
 import { DescribeTableCommand } from '@aws-sdk/client-dynamodb';
