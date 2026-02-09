@@ -1,20 +1,21 @@
-import dotenv from 'dotenv';
 import { createServer } from './server';
 import { logger } from './utils/logger';
 import { checkDynamoDBConnection } from './config/dynamodb';
 import { createRedisClient, isRedisEnabled } from './config/redis';
+import { getEnv, validateRuntimeEnvironment } from './config/env';
 
-dotenv.config();
+const env = getEnv();
+validateRuntimeEnvironment('http');
+const port = env.PORT;
 
-const port = process.env.PORT || 3001;
-
-async function startServer() {
+export async function startServer() {
   try {
     // Connect to DynamoDB
     const dynamoConnected = await checkDynamoDBConnection();
     if (!dynamoConnected) {
       logger.error('Failed to connect to DynamoDB');
       process.exit(1);
+      return;
     }
     logger.info('Connected to DynamoDB');
 
@@ -39,7 +40,10 @@ async function startServer() {
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
+    return;
   }
 }
 
-startServer(); 
+if (require.main === module && env.NODE_ENV !== 'test') {
+  void startServer();
+}

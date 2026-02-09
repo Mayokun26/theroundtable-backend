@@ -10,7 +10,8 @@ export const requestLogger = (
   
   res.on('finish', () => {
     const duration = Date.now() - start;
-    const logMessage = `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`;
+    const requestId = req.header('x-request-id') || 'none';
+    const logMessage = `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms requestId=${requestId}`;
     
     if (res.statusCode >= 500) {
       logger.error(logMessage);
