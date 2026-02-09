@@ -17,5 +17,5 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/config/database.ts", "src/test-connections.ts"]
-} 
+  "exclude": ["node_modules", "dist"]
+}

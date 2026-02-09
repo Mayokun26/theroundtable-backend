@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
+import { getEnv } from '../config/env';
 
 interface ApiError extends Error {
   statusCode?: number;
@@ -10,8 +11,9 @@ export const errorHandler = (
   err: ApiError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
+  const env = getEnv();
   const statusCode = err.statusCode || 500;
   
   // Log error
@@ -27,6 +29,6 @@ export const errorHandler = (
   res.status(statusCode).json({
     status: 'error',
     message: err.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(env.NODE_ENV === 'development' && { stack: err.stack })
   });
-}; 
+};

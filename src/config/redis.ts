@@ -1,18 +1,20 @@
 import Redis from 'ioredis';
 import { logger } from '../utils/logger';
+import { getEnv } from './env';
 
 let redisClient: Redis | null = null;
 let redisEnabled = true;
 
 export async function createRedisClient() {
-  if (!process.env.REDIS_URL) {
+  const env = getEnv();
+  if (!env.REDIS_URL) {
     logger.warn('Redis URL is not defined, Redis functionality will be disabled');
     redisEnabled = false;
     return null;
   }
 
   try {
-    redisClient = new Redis(process.env.REDIS_URL, {
+    redisClient = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: 3,
       connectTimeout: 5000,
       retryStrategy(times) {
@@ -48,13 +50,7 @@ export async function createRedisClient() {
 
 export function getRedisClient() {
   if (!redisEnabled) {
-    // Return a dummy client or null if Redis is disabled
-    return {
-      get: async () => null,
-      set: async () => null,
-      del: async () => null,
-      // Add other methods you use as needed
-    } as unknown as Redis;
+    return null;
   }
   
   if (!redisClient) {

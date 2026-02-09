@@ -7,14 +7,16 @@ import { requestLogger } from './middleware/requestLogger';
 import { characterRoutes } from './routes/characters';
 import { conversationRoutes } from './routes/conversations';
 import { healthRoutes } from './routes/health';
+import { getEnv } from './config/env';
 
 export const createServer = () => {
+  const env = getEnv();
   const app = express();
 
   // Basic middleware
   app.use(helmet());
   app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000',
+    origin: env.ALLOWED_ORIGINS.split(','),
     credentials: true,
   }));
   app.use(express.json());
@@ -22,8 +24,8 @@ export const createServer = () => {
 
   // Rate limiting
   const limiter = rateLimit({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    max: env.RATE_LIMIT_MAX_REQUESTS,
   });
   app.use(limiter);
 
