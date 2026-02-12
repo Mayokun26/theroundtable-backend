@@ -74,17 +74,14 @@ export async function runConversationTurn(request: ConversationRequest): Promise
   const intent = classifyMessageIntent(request.message);
   const targeting = analyzeMessageTargeting(request.message, panelCharacters);
   const selectedIds = selectRespondingCharacters(targeting, panelCharacters);
-  const finalResponderIds =
-    intent.responseStyle === 'brief_friendly'
-      ? selectedIds
-      : enforceResponderFloor({
-          selectedIds,
-          panelIds: panelCharacters.map((character) => character.id),
-          directlyAddressed: targeting.directlyAddressed,
-          mentionedCharacters: targeting.mentionedCharacters,
-          topicTriggers: targeting.topicTriggers,
-          minimum: 3,
-        });
+  const finalResponderIds = enforceResponderFloor({
+    selectedIds,
+    panelIds: panelCharacters.map((character) => character.id),
+    directlyAddressed: targeting.directlyAddressed,
+    mentionedCharacters: targeting.mentionedCharacters,
+    topicTriggers: targeting.topicTriggers,
+    minimum: 3,
+  });
   const respondingCharacters = panelCharacters.filter((character) => finalResponderIds.includes(character.id));
 
   const memoryContext = await conversationMemory.getSessionContext(request.sessionId);
