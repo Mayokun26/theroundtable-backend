@@ -65,7 +65,7 @@ function sentenceForStyle(style: ResponseStyle): number {
   if (style === 'brief_friendly') return 1;
   if (style === 'brief_informative') return 2;
   if (style === 'moderate_engagement') return 3;
-  return 4;
+  return 3;
 }
 
 function generationParamsForStyle(
@@ -104,13 +104,24 @@ function trimToSentenceLimit(text: string, limit: number): string {
 
 function normalizeModelResponseContent(content: string, style: ResponseStyle, targeting: TargetingAnalysis): string {
   const normalized = content.replace(/\s+/g, ' ').trim();
-  if (style !== 'brief_friendly') {
-    return normalized;
-  }
-
-  const sentenceLimit = targeting.genderMismatch ? 2 : 1;
+  const sentenceLimit =
+    style === 'brief_friendly'
+      ? targeting.genderMismatch
+        ? 2
+        : 1
+      : sentenceForStyle(style);
   const sentenceTrimmed = trimToSentenceLimit(normalized, sentenceLimit);
-  const maxChars = targeting.genderMismatch ? 200 : 140;
+
+  const maxChars =
+    style === 'brief_friendly'
+      ? targeting.genderMismatch
+        ? 200
+        : 140
+      : style === 'brief_informative'
+        ? 260
+        : style === 'moderate_engagement'
+          ? 380
+          : 440;
   if (sentenceTrimmed.length <= maxChars) {
     return sentenceTrimmed;
   }
