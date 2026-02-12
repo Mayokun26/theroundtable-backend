@@ -109,6 +109,59 @@ describe('response generator', () => {
     expect(responses[1].content).toBe('Curie response');
   });
 
+  it('trims verbose openai greeting output to concise form', async () => {
+    process.env.RESPONSE_GENERATOR_MODE = 'openai';
+    process.env.OPENAI_API_KEY = 'test-key';
+
+    const createMock = jest.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              responses: [
+                {
+                  characterId: '1',
+                  content:
+                    'Good morning to all gathered here. I am delighted to greet each of you with elaborate gratitude and deep reflection on our shared journey across eras. Let us proceed with an expansive opening that spans many themes.',
+                },
+                {
+                  characterId: '2',
+                  content:
+                    'Good morning everyone. I bring warm regard and scientific curiosity to this most fascinating panel. It is a privilege to begin with extensive remarks before any question is posed.',
+                },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+
+    const module = await loadGeneratorWithMock(createMock);
+    const greetingTargeting: TargetingAnalysis = {
+      directlyAddressed: [],
+      mentionedCharacters: [],
+      topicTriggers: new Map<string, number>(),
+      isGreeting: true,
+      genderMismatch: null,
+    };
+
+    const responses = await module.generatePanelResponses({
+      message: 'good morning panelists',
+      sessionId: 'openai-greeting-trim',
+      panelCharacters: baseCharacters,
+      respondingCharacters: baseCharacters,
+      style: 'brief_friendly',
+      targeting: greetingTargeting,
+      memoryContext,
+      requestId: 'req-2b',
+    });
+
+    expect(responses[0].content.length).toBeLessThanOrEqual(140);
+    expect(responses[1].content.length).toBeLessThanOrEqual(140);
+    expect(responses[0].content.split(/[.!?]+/).filter(Boolean).length).toBeLessThanOrEqual(1);
+    expect(responses[1].content.split(/[.!?]+/).filter(Boolean).length).toBeLessThanOrEqual(1);
+  });
+
   it('falls back when model output is invalid JSON', async () => {
     process.env.RESPONSE_GENERATOR_MODE = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';

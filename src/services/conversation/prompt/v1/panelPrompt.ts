@@ -203,7 +203,7 @@ function recentConversation(memoryContext: SessionContext, style: ResponseStyle)
     .join('\n');
 }
 
-function interactionInstruction(targeting: TargetingAnalysis): string {
+function interactionInstruction(targeting: TargetingAnalysis, style: ResponseStyle): string {
   const instructions: string[] = [];
 
   if (targeting.directlyAddressed.length > 0) {
@@ -216,7 +216,11 @@ function interactionInstruction(targeting: TargetingAnalysis): string {
     );
   }
 
-  instructions.push('Each responder should either challenge, build on, or question at least one other responder.');
+  if (style === 'brief_friendly') {
+    instructions.push('Keep it warm and concise; avoid debate depth on greeting turns.');
+  } else {
+    instructions.push('Each responder should either challenge, build on, or question at least one other responder.');
+  }
   return instructions.join(' ');
 }
 
@@ -240,8 +244,10 @@ export function buildPanelPrompt(input: BuildPanelPromptInput): { systemPrompt: 
     '{"responses":[{"characterId":"string","content":"string"}]}',
     `Return exactly ${input.respondingCharacters.length} responses, one per responder.`,
     'Each response must sound distinct to that character; avoid shared phrasing.',
-    interactionInstruction(input.targeting),
-    'When multiple characters respond, at least half should directly reference another responder by name.',
+    interactionInstruction(input.targeting, input.style),
+    input.style === 'brief_friendly'
+      ? 'Keep each response to one short sentence (two only when required for gender-mismatch acknowledgment).'
+      : 'When multiple characters respond, at least half should directly reference another responder by name.',
     'Keep responses conversational and specific; avoid generic motivational language and avoid repeating long biography.',
     `Responder order: ${responderNames.join(' -> ')}`,
   ].join('\n');
