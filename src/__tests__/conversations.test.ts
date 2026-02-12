@@ -7,7 +7,7 @@ describe('conversation service', () => {
     expect(() => parseConversationRequest({ message: 'hello' })).toThrow(ZodError);
   });
 
-  it('limits greeting responses to at most two characters', async () => {
+  it('returns three responders for greeting turns', async () => {
     const request = parseConversationRequest({
       message: 'hello everyone',
       characters: ['1', '2', '3', '4'],
@@ -15,7 +15,7 @@ describe('conversation service', () => {
     });
 
     const responses = await runConversationTurn(request);
-    expect(responses.length).toBeLessThanOrEqual(2);
+    expect(responses.length).toBe(3);
   });
 
   it('prioritizes directly addressed character', async () => {
@@ -31,7 +31,7 @@ describe('conversation service', () => {
     expect(responses).toHaveLength(3);
   });
 
-  it('returns at least two responders for gender-mismatch greeting', async () => {
+  it('returns three responders for gender-mismatch greeting', async () => {
     const request = parseConversationRequest({
       message: 'hello gentlemen',
       characters: ['1', '2', '3'],
@@ -41,7 +41,7 @@ describe('conversation service', () => {
     const responses = await runConversationTurn(request);
     const responderIds = responses.map((item) => item.id);
 
-    expect(responses.length).toBeGreaterThanOrEqual(2);
+    expect(responses.length).toBe(3);
     expect(responderIds).toContain('2');
   });
 
