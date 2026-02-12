@@ -77,7 +77,7 @@ function generationParamsForStyle(
   const responderBoost = Math.max(0, responderCount - 2) * 120;
 
   if (style === 'brief_friendly') {
-    return { maxTokens: 220 + responderBoost + Math.floor(complexityBoost / 2), temperature: 0.65 };
+    return { maxTokens: 140 + Math.floor(responderBoost / 2) + Math.floor(complexityBoost / 3), temperature: 0.55 };
   }
   if (style === 'brief_informative') {
     return { maxTokens: 320 + responderBoost + Math.floor(complexityBoost / 2), temperature: 0.7 };
@@ -86,6 +86,36 @@ function generationParamsForStyle(
     return { maxTokens: 540 + responderBoost + complexityBoost, temperature: 0.78 };
   }
   return { maxTokens: 760 + responderBoost + complexityBoost, temperature: 0.82 };
+}
+
+function trimToSentenceLimit(text: string, limit: number): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const segments = normalized
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (segments.length === 0) {
+    return normalized;
+  }
+
+  return segments.slice(0, limit).join(' ').trim();
+}
+
+function normalizeModelResponseContent(content: string, style: ResponseStyle, targeting: TargetingAnalysis): string {
+  const normalized = content.replace(/\s+/g, ' ').trim();
+  if (style !== 'brief_friendly') {
+    return normalized;
+  }
+
+  const sentenceLimit = targeting.genderMismatch ? 2 : 1;
+  const sentenceTrimmed = trimToSentenceLimit(normalized, sentenceLimit);
+  const maxChars = targeting.genderMismatch ? 200 : 140;
+  if (sentenceTrimmed.length <= maxChars) {
+    return sentenceTrimmed;
+  }
+
+  return `${sentenceTrimmed.slice(0, maxChars - 3).trimEnd()}...`;
 }
 
 function primaryBeliefSnippet(character: Character): string | null {
@@ -305,9 +335,12 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
     const responses = input.respondingCharacters.map((character) => ({
       id: character.id,
       name: character.name,
-      content:
+      content: normalizeModelResponseContent(
         byId.get(character.id) ??
-        styleAwareDeterministicResponse(character, input.message, input.style, undefined, input.targeting),
+          styleAwareDeterministicResponse(character, input.message, input.style, undefined, input.targeting),
+        input.style,
+        input.targeting
+      ),
     }));
 
     onOpenAISuccess();
