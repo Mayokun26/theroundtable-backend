@@ -45,6 +45,7 @@ describe('targeting service', () => {
     expect(targeting.genderMismatch?.type).toBe('excluded_women');
     const responders = selectRespondingCharacters(targeting, panel);
     expect(responders).toContain('2');
+    expect(responders.length).toBeGreaterThanOrEqual(2);
   });
 
   it('uses conviction triggers to prioritize responders', () => {

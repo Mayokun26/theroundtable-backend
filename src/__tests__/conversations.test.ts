@@ -31,6 +31,20 @@ describe('conversation service', () => {
     expect(responses).toHaveLength(3);
   });
 
+  it('returns at least two responders for gender-mismatch greeting', async () => {
+    const request = parseConversationRequest({
+      message: 'hello gentlemen',
+      characters: ['1', '2', '3'],
+      sessionId: 'test-session-gender-mismatch-greeting',
+    });
+
+    const responses = await runConversationTurn(request);
+    const responderIds = responses.map((item) => item.id);
+
+    expect(responses.length).toBeGreaterThanOrEqual(2);
+    expect(responderIds).toContain('2');
+  });
+
   it('retrieves character by id', () => {
     const character = getCharacterById('1');
     expect(character?.id).toBe('1');
