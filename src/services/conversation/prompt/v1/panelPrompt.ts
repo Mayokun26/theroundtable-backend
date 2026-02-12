@@ -204,15 +204,20 @@ function recentConversation(memoryContext: SessionContext, style: ResponseStyle)
 }
 
 function interactionInstruction(targeting: TargetingAnalysis): string {
+  const instructions: string[] = [];
+
   if (targeting.directlyAddressed.length > 0) {
-    return 'Characters who were directly addressed should open by acknowledging the addressee by name.';
+    instructions.push('Characters who were directly addressed should open by acknowledging the addressee by name.');
   }
 
   if (targeting.genderMismatch) {
-    return `Gender-mismatch cue detected (${targeting.genderMismatch.type}). Affected characters should react naturally.`;
+    instructions.push(
+      `Gender-mismatch cue detected (${targeting.genderMismatch.type}). At least one affected character must explicitly note the exclusion and reframe inclusively.`
+    );
   }
 
-  return 'Each responder should either challenge, build on, or question at least one other responder.';
+  instructions.push('Each responder should either challenge, build on, or question at least one other responder.');
+  return instructions.join(' ');
 }
 
 export function buildPanelPrompt(input: BuildPanelPromptInput): { systemPrompt: string; userPrompt: string } {

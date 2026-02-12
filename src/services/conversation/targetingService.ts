@@ -119,8 +119,9 @@ export function selectRespondingCharacters(
       }
     }
 
-    if (responding.length === 0) {
-      responding.push(...availableIds.slice(0, Math.min(2, availableIds.length)));
+    if (responding.length < Math.min(2, availableIds.length)) {
+      const filler = availableIds.filter((id) => !responding.includes(id)).slice(0, Math.min(2, availableIds.length) - responding.length);
+      responding.push(...filler);
     }
 
     return [...new Set(responding)];

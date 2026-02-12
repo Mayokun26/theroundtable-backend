@@ -10,6 +10,7 @@ const baseCharacters: Character[] = [
   {
     id: '2',
     name: 'Marie Curie',
+    gender: 'female',
     category: 'Scientist',
     core_beliefs: [{ statement: 'Evidence first', conviction: 10 }],
   },
@@ -165,5 +166,35 @@ describe('response generator', () => {
     });
 
     expect(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('deterministic brief response acknowledges gender mismatch for affected character', async () => {
+    process.env.RESPONSE_GENERATOR_MODE = 'deterministic';
+
+    const createMock = jest.fn();
+    const module = await loadGeneratorWithMock(createMock);
+
+    const mismatchTargeting: TargetingAnalysis = {
+      directlyAddressed: [],
+      mentionedCharacters: [],
+      topicTriggers: new Map<string, number>(),
+      isGreeting: true,
+      genderMismatch: { type: 'excluded_women', excludedGenders: ['female'] },
+    };
+
+    const responses = await module.generatePanelResponses({
+      message: 'hello gentlemen',
+      sessionId: 'deterministic-mismatch',
+      panelCharacters: baseCharacters,
+      respondingCharacters: baseCharacters,
+      style: 'brief_friendly',
+      targeting: mismatchTargeting,
+      memoryContext,
+      requestId: 'req-6',
+    });
+
+    const marie = responses.find((response) => response.id === '2');
+    expect(marie?.content.toLowerCase()).toContain('included');
+    expect(createMock).not.toHaveBeenCalled();
   });
 });

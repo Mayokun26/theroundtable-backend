@@ -128,16 +128,26 @@ function styleAwareDeterministicResponse(
   character: Character,
   message: string,
   style: ResponseStyle,
-  otherResponder?: Character
+  otherResponder?: Character,
+  targeting?: TargetingAnalysis
 ): string {
   const sentences: string[] = [];
   const baseIntro = `${character.name}:`;
   const otherName = otherResponder?.name;
   const relationshipSnippet = relationshipContextSnippet(character, otherResponder);
+  const isGenderMismatchAffected =
+    Boolean(targeting?.genderMismatch) &&
+    Boolean(character.gender) &&
+    targeting?.genderMismatch?.excludedGenders.includes(String(character.gender));
+  const mismatchLine = "I should be included too, so let's address everyone respectfully.";
 
   if (style === 'brief_friendly') {
     const relationshipLine = otherName ? `${otherName}, good to see your perspective.` : 'Good to see you.';
     sentences.push(`${baseIntro} ${relationshipLine}`);
+    if (isGenderMismatchAffected) {
+      sentences.push(mismatchLine);
+      return sentences.slice(0, 2).join(' ');
+    }
     if (otherName) {
       sentences.push('Let us keep this exchange thoughtful and concise.');
     }
@@ -176,6 +186,10 @@ function styleAwareDeterministicResponse(
     sentences.push('I would challenge assumptions while staying open to principled disagreement.');
   }
 
+  if (isGenderMismatchAffected) {
+    sentences.push(mismatchLine);
+  }
+
   return sentences.slice(0, sentenceForStyle(style)).join(' ');
 }
 
@@ -191,7 +205,7 @@ function deterministicResponses(input: PanelGenerationInput): ConversationRespon
     return {
       id: character.id,
       name: character.name,
-      content: styleAwareDeterministicResponse(character, input.message, input.style, other),
+      content: styleAwareDeterministicResponse(character, input.message, input.style, other, input.targeting),
     };
   });
 }
@@ -293,7 +307,7 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
       name: character.name,
       content:
         byId.get(character.id) ??
-        styleAwareDeterministicResponse(character, input.message, input.style),
+        styleAwareDeterministicResponse(character, input.message, input.style, undefined, input.targeting),
     }));
 
     onOpenAISuccess();
