@@ -25,6 +25,45 @@ export function parseConversationRequest(body: unknown): ConversationRequest {
   };
 }
 
+function uniqueIds(ids: string[]): string[] {
+  return [...new Set(ids)];
+}
+
+function enforceResponderFloor(params: {
+  selectedIds: string[];
+  panelIds: string[];
+  directlyAddressed: string[];
+  mentionedCharacters: string[];
+  topicTriggers: Map<string, number>;
+  minimum: number;
+}): string[] {
+  const { selectedIds, panelIds, directlyAddressed, mentionedCharacters, topicTriggers, minimum } = params;
+  const targetCount = Math.min(minimum, panelIds.length);
+  if (selectedIds.length >= targetCount) {
+    return uniqueIds(selectedIds);
+  }
+
+  const sortedByConviction = Array.from(topicTriggers.entries())
+    .sort(([, a], [, b]) => b - a)
+    .map(([id]) => id);
+
+  const highConviction = Array.from(topicTriggers.entries())
+    .filter(([, conviction]) => conviction >= 9)
+    .sort(([, a], [, b]) => b - a)
+    .map(([id]) => id);
+
+  const priorityOrder = uniqueIds([
+    ...selectedIds,
+    ...directlyAddressed,
+    ...highConviction,
+    ...sortedByConviction,
+    ...mentionedCharacters,
+    ...panelIds,
+  ]).filter((id) => panelIds.includes(id));
+
+  return priorityOrder.slice(0, targetCount);
+}
+
 export async function runConversationTurn(request: ConversationRequest): Promise<ConversationResponse[]> {
   const startedAt = Date.now();
   const panelCharacters = getCharactersByIds(request.characters);
@@ -32,11 +71,22 @@ export async function runConversationTurn(request: ConversationRequest): Promise
     throw new Error('No valid characters found for request.');
   }
 
+  const intent = classifyMessageIntent(request.message);
   const targeting = analyzeMessageTargeting(request.message, panelCharacters);
   const selectedIds = selectRespondingCharacters(targeting, panelCharacters);
-  const respondingCharacters = panelCharacters.filter((character) => selectedIds.includes(character.id));
+  const finalResponderIds =
+    intent.responseStyle === 'brief_friendly'
+      ? selectedIds
+      : enforceResponderFloor({
+          selectedIds,
+          panelIds: panelCharacters.map((character) => character.id),
+          directlyAddressed: targeting.directlyAddressed,
+          mentionedCharacters: targeting.mentionedCharacters,
+          topicTriggers: targeting.topicTriggers,
+          minimum: 3,
+        });
+  const respondingCharacters = panelCharacters.filter((character) => finalResponderIds.includes(character.id));
 
-  const intent = classifyMessageIntent(request.message);
   const memoryContext = await conversationMemory.getSessionContext(request.sessionId);
 
   const responses = await generatePanelResponses({

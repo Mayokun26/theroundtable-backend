@@ -28,6 +28,7 @@ describe('conversation service', () => {
     const responses = await runConversationTurn(request);
     const responderIds = responses.map((item) => item.id);
     expect(responderIds).toContain('1');
+    expect(responses).toHaveLength(3);
   });
 
   it('retrieves character by id', () => {
