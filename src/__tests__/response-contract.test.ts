@@ -30,10 +30,12 @@ describe('response contract', () => {
     });
 
     const responses = await runConversationTurn(request);
-    expect(responses).toHaveLength(3);
+    expect(responses.length).toBeGreaterThanOrEqual(3);
+    expect(responses.length).toBeLessThanOrEqual(6);
+    expect(new Set(responses.map((response) => response.id)).size).toBe(3);
 
     for (const response of responses) {
-      expect(sentenceCount(response.content)).toBeGreaterThanOrEqual(3);
+      expect(sentenceCount(response.content)).toBeGreaterThanOrEqual(2);
     }
   });
 

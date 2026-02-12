@@ -21,6 +21,7 @@ describe('panel prompt quality', () => {
       sessionId: 'prompt-size',
       panelCharacters: responders,
       respondingCharacters: responders,
+      turnPlanCharacters: responders,
       style: 'full_engagement',
       targeting: targetingStub(),
       memoryContext: {
@@ -43,6 +44,7 @@ describe('panel prompt quality', () => {
       sessionId: 'prompt-relationship',
       panelCharacters: responders,
       respondingCharacters: responders,
+      turnPlanCharacters: responders,
       style: 'moderate_engagement',
       targeting: targetingStub(),
       memoryContext: { messages: [] },
@@ -60,6 +62,7 @@ describe('panel prompt quality', () => {
       sessionId: 'prompt-relevance',
       panelCharacters: responders,
       respondingCharacters: responders,
+      turnPlanCharacters: responders,
       style: 'full_engagement',
       targeting: targetingStub(),
       memoryContext: { messages: [] },

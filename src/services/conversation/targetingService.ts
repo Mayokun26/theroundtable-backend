@@ -15,7 +15,27 @@ function calculateConvictionTrigger(message: string, character: Character): numb
   const messageWords = message
     .toLowerCase()
     .split(/\s+|[.,!?;:]/)
-    .filter((word) => word.length > 1);
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 3);
+
+  const tokenMatches = (candidate: string): boolean => {
+    const token = candidate.toLowerCase().trim();
+    if (token.length < 3) {
+      return false;
+    }
+
+    return messageWords.some((word) => {
+      if (word === token) {
+        return true;
+      }
+
+      if (word.length >= 5 && token.length >= 5) {
+        return token.includes(word) || word.includes(token);
+      }
+
+      return false;
+    });
+  };
 
   if (character.core_beliefs) {
     for (const belief of character.core_beliefs) {
@@ -25,7 +45,7 @@ function calculateConvictionTrigger(message: string, character: Character): numb
 
       const matched = belief.triggers.some((trigger) => {
         const triggerLower = trigger.toLowerCase();
-        return messageWords.some((word) => word === triggerLower || triggerLower.includes(word) || word.includes(triggerLower));
+        return tokenMatches(triggerLower);
       });
 
       if (matched) {
@@ -36,7 +56,7 @@ function calculateConvictionTrigger(message: string, character: Character): numb
 
   if (character.topic_convictions) {
     for (const [topic, conviction] of Object.entries(character.topic_convictions)) {
-      if (messageWords.some((word) => word === topic.toLowerCase() || topic.toLowerCase().includes(word) || word.includes(topic.toLowerCase()))) {
+      if (tokenMatches(topic)) {
         maxConviction = Math.max(maxConviction, conviction);
       }
     }

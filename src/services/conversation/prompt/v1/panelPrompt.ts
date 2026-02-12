@@ -6,6 +6,7 @@ interface BuildPanelPromptInput {
   sessionId: string;
   panelCharacters: Character[];
   respondingCharacters: Character[];
+  turnPlanCharacters: Character[];
   style: ResponseStyle;
   targeting: TargetingAnalysis;
   memoryContext: SessionContext;
@@ -226,6 +227,8 @@ function interactionInstruction(targeting: TargetingAnalysis, style: ResponseSty
 
 export function buildPanelPrompt(input: BuildPanelPromptInput): { systemPrompt: string; userPrompt: string } {
   const responderNames = input.respondingCharacters.map((character) => character.name);
+  const turnPlan = input.turnPlanCharacters.length > 0 ? input.turnPlanCharacters : input.respondingCharacters;
+  const turnPlanLines = turnPlan.map((character, index) => `${index + 1}. ${character.name}`);
   const messageTokens = tokenize(input.message);
   const isHighDensityPanel = input.respondingCharacters.length >= 4;
 
@@ -242,20 +245,21 @@ export function buildPanelPrompt(input: BuildPanelPromptInput): { systemPrompt: 
     `Response style: ${input.style}. ${responseStyleInstruction(input.style)}`,
     'Output schema:',
     '{"responses":[{"characterId":"string","content":"string"}]}',
-    `Return exactly ${input.respondingCharacters.length} responses, one per responder.`,
+    `Return exactly ${turnPlan.length} responses, one per turn-plan slot. Repeated character IDs are allowed when a character appears multiple times in the plan.`,
     'Each response must sound distinct to that character; avoid shared phrasing.',
     interactionInstruction(input.targeting, input.style),
     input.style === 'brief_friendly'
       ? 'Keep each response to one short sentence (two only when required for gender-mismatch acknowledgment).'
       : 'When multiple characters respond, at least half should directly reference another responder by name.',
     'Keep responses conversational and specific; avoid generic motivational language and avoid repeating long biography.',
-    `Responder order: ${responderNames.join(' -> ')}`,
+    'Follow this exact turn plan order:',
+    ...turnPlanLines,
   ].join('\n');
 
   const userPrompt = [
     `Session: ${input.sessionId}`,
     `Panel members: ${input.panelCharacters.map((character) => character.name).join(', ')}`,
-    `Responders: ${responderNames.join(', ')}`,
+    `Core responders: ${responderNames.join(', ')}`,
     `User message: ${input.message}`,
     'Recent session context:',
     recentConversation(input.memoryContext, input.style),
