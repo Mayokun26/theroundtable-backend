@@ -30,6 +30,7 @@ describe('response contract', () => {
     });
 
     const responses = await runConversationTurn(request);
+    expect(responses).toHaveLength(3);
 
     for (const response of responses) {
       expect(sentenceCount(response.content)).toBeGreaterThanOrEqual(3);
