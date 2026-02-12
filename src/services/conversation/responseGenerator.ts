@@ -9,6 +9,7 @@ interface PanelGenerationInput {
   sessionId: string;
   panelCharacters: Character[];
   respondingCharacters: Character[];
+  turnPlanCharacters: Character[];
   style: ResponseStyle;
   targeting: TargetingAnalysis;
   memoryContext: SessionContext;
@@ -64,8 +65,8 @@ function parsePanelOutput(raw: string): ParsedPanelOutput {
 function sentenceForStyle(style: ResponseStyle): number {
   if (style === 'brief_friendly') return 1;
   if (style === 'brief_informative') return 2;
-  if (style === 'moderate_engagement') return 3;
-  return 3;
+  if (style === 'moderate_engagement') return 2;
+  return 2;
 }
 
 function generationParamsForStyle(
@@ -118,10 +119,10 @@ function normalizeModelResponseContent(content: string, style: ResponseStyle, ta
         ? 200
         : 140
       : style === 'brief_informative'
-        ? 260
+        ? 220
         : style === 'moderate_engagement'
-          ? 380
-          : 440;
+          ? 280
+          : 320;
   if (sentenceTrimmed.length <= maxChars) {
     return sentenceTrimmed;
   }
@@ -207,7 +208,7 @@ function styleAwareDeterministicResponse(
     if (beliefSnippet) {
       sentences.push(`My guiding principle remains: ${beliefSnippet}`);
     }
-    return sentences.join(' ');
+    return sentences.slice(0, sentenceForStyle(style)).join(' ');
   }
 
   sentences.push(`${baseIntro} The question of "${message}" deserves careful thought from my era and convictions.`);
@@ -234,19 +235,32 @@ function styleAwareDeterministicResponse(
   return sentences.slice(0, sentenceForStyle(style)).join(' ');
 }
 
+function adjacentSpeaker(turnCharacters: Character[], index: number): Character | undefined {
+  for (let left = index - 1; left >= 0; left -= 1) {
+    if (turnCharacters[left].id !== turnCharacters[index].id) {
+      return turnCharacters[left];
+    }
+  }
+  for (let right = index + 1; right < turnCharacters.length; right += 1) {
+    if (turnCharacters[right].id !== turnCharacters[index].id) {
+      return turnCharacters[right];
+    }
+  }
+  return undefined;
+}
+
 function deterministicResponses(input: PanelGenerationInput): ConversationResponse[] {
-  const responders = input.respondingCharacters;
+  const turns = input.turnPlanCharacters.length > 0 ? input.turnPlanCharacters : input.respondingCharacters;
 
-  return responders.map((character, index) => {
-    const other =
-      responders.length > 1
-        ? responders[(index + 1) % responders.length]
-        : undefined;
-
+  return turns.map((character, index) => {
     return {
       id: character.id,
       name: character.name,
-      content: styleAwareDeterministicResponse(character, input.message, input.style, other, input.targeting),
+      content: normalizeModelResponseContent(
+        styleAwareDeterministicResponse(character, input.message, input.style, adjacentSpeaker(turns, index), input.targeting),
+        input.style,
+        input.targeting
+      ),
     };
   });
 }
@@ -309,6 +323,7 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
     sessionId: input.sessionId,
     panelCharacters: input.panelCharacters,
     respondingCharacters: input.respondingCharacters,
+    turnPlanCharacters: input.turnPlanCharacters,
     style: input.style,
     targeting: input.targeting,
     memoryContext: input.memoryContext,
@@ -317,7 +332,7 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
   const startedAt = Date.now();
   const { maxTokens, temperature } = generationParamsForStyle(
     input.style,
-    input.respondingCharacters.length,
+    input.turnPlanCharacters.length || input.respondingCharacters.length,
     input.message.length
   );
 
@@ -341,18 +356,36 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
     }
 
     const parsed = parsePanelOutput(rawOutput);
-    const byId = new Map(parsed.responses.map((response) => [response.characterId, response.content]));
+    const turns = input.turnPlanCharacters.length > 0 ? input.turnPlanCharacters : input.respondingCharacters;
+    const queuedById = new Map<string, string[]>();
+    for (const response of parsed.responses) {
+      const queued = queuedById.get(response.characterId) ?? [];
+      queued.push(response.content);
+      queuedById.set(response.characterId, queued);
+    }
 
-    const responses = input.respondingCharacters.map((character) => ({
-      id: character.id,
-      name: character.name,
-      content: normalizeModelResponseContent(
-        byId.get(character.id) ??
-          styleAwareDeterministicResponse(character, input.message, input.style, undefined, input.targeting),
-        input.style,
-        input.targeting
-      ),
-    }));
+    const responses = turns.map((character, index) => {
+      const queued = queuedById.get(character.id) ?? [];
+      const modelContent = queued.length > 0 ? queued.shift() : undefined;
+      queuedById.set(character.id, queued);
+
+      return {
+        id: character.id,
+        name: character.name,
+        content: normalizeModelResponseContent(
+          modelContent ??
+            styleAwareDeterministicResponse(
+              character,
+              input.message,
+              input.style,
+              adjacentSpeaker(turns, index),
+              input.targeting
+            ),
+          input.style,
+          input.targeting
+        ),
+      };
+    });
 
     onOpenAISuccess();
 

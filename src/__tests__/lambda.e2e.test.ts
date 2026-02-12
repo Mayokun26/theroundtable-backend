@@ -71,7 +71,8 @@ describe('lambda e2e', () => {
     const body = parseBody(result);
     expect(body.status).toBe('success');
     expect(Array.isArray(body.responses)).toBe(true);
-    expect(body.responses.length).toBeLessThanOrEqual(2);
+    expect(body.responses.length).toBeGreaterThanOrEqual(3);
+    expect(body.responses.length).toBeLessThanOrEqual(6);
     expect(body.sessionId).toBe('lambda-e2e-greeting');
   });
 
