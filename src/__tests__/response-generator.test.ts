@@ -162,6 +162,50 @@ describe('response generator', () => {
     expect(responses[1].content.split(/[.!?]+/).filter(Boolean).length).toBeLessThanOrEqual(1);
   });
 
+  it('trims verbose openai output for non-greeting styles too', async () => {
+    process.env.RESPONSE_GENERATOR_MODE = 'openai';
+    process.env.OPENAI_API_KEY = 'test-key';
+
+    const createMock = jest.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              responses: [
+                {
+                  characterId: '1',
+                  content:
+                    'First point is substantial. Second point adds historical context. Third point responds directly to another panelist. Fourth point keeps elaborating well beyond needed brevity for this mode.',
+                },
+                {
+                  characterId: '2',
+                  content:
+                    'First observation is clear. Second observation is practical. Third observation is collaborative. Fourth observation is extra detail that should be cut in post-processing.',
+                },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+
+    const module = await loadGeneratorWithMock(createMock);
+
+    const responses = await module.generatePanelResponses({
+      message: 'Can you discuss this topic?',
+      sessionId: 'openai-moderate-trim',
+      panelCharacters: baseCharacters,
+      respondingCharacters: baseCharacters,
+      style: 'moderate_engagement',
+      targeting,
+      memoryContext,
+      requestId: 'req-2c',
+    });
+
+    expect(responses[0].content.split(/[.!?]+/).filter(Boolean).length).toBeLessThanOrEqual(3);
+    expect(responses[1].content.split(/[.!?]+/).filter(Boolean).length).toBeLessThanOrEqual(3);
+  });
+
   it('falls back when model output is invalid JSON', async () => {
     process.env.RESPONSE_GENERATOR_MODE = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
