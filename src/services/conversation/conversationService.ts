@@ -148,6 +148,48 @@ function buildTurnSequence(orderedResponderIds: string[], turns: number): string
   return sequence;
 }
 
+function summarizePanelPoint(content: string): string {
+  const cleaned = content
+    .replace(/^[^:]+:\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0]?.trim() ?? cleaned;
+  if (firstSentence.length <= 120) {
+    return firstSentence;
+  }
+  return `${firstSentence.slice(0, 117).trimEnd()}...`;
+}
+
+function ensureSingleSentence(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const sentence = normalized.split(/(?<=[.!?])\s+/)[0]?.trim() ?? normalized;
+  return sentence.endsWith('.') || sentence.endsWith('!') || sentence.endsWith('?') ? sentence : `${sentence}.`;
+}
+
+function buildModeratorResponse(params: {
+  panelResponses: ConversationResponse[];
+  isSessionStart: boolean;
+}): ConversationResponse {
+  const { panelResponses, isSessionStart } = params;
+  const lead = panelResponses[0];
+  const panelistName = lead?.name ?? 'the panel';
+  const panelPoint = ensureSingleSentence(
+    lead ? summarizePanelPoint(lead.content) : 'Each perspective added a useful angle.'
+  );
+
+  const opener = isSessionStart
+    ? `Welcome to The Round Table; ${panelistName} opens with: ${panelPoint}`
+    : `Strong point from ${panelistName}: ${panelPoint}`;
+
+  const handoff = `What should we explore next: deepen ${panelistName}'s view or shift to another angle?`;
+
+  return {
+    id: 'moderator',
+    name: 'Moderator',
+    content: `${ensureSingleSentence(opener)} ${ensureSingleSentence(handoff)}`.trim(),
+  };
+}
+
 function enforceResponderFloor(params: {
   selectedIds: string[];
   panelIds: string[];
@@ -222,7 +264,7 @@ export async function runConversationTurn(request: ConversationRequest): Promise
 
   const memoryContext = await conversationMemory.getSessionContext(request.sessionId);
 
-  const responses = await generatePanelResponses({
+  const panelResponses = await generatePanelResponses({
     message: request.message,
     sessionId: request.sessionId,
     panelCharacters,
@@ -233,6 +275,12 @@ export async function runConversationTurn(request: ConversationRequest): Promise
     memoryContext,
     requestId: request.requestId,
   });
+  const isSessionStart = memoryContext.messages.length === 0;
+  const moderatorResponse = buildModeratorResponse({
+    panelResponses,
+    isSessionStart,
+  });
+  const responses = [...panelResponses, moderatorResponse];
 
   await conversationMemory.addMessage(request.sessionId, {
     sender: 'user',

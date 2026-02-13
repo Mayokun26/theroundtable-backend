@@ -71,8 +71,10 @@ describe('lambda e2e', () => {
     const body = parseBody(result);
     expect(body.status).toBe('success');
     expect(Array.isArray(body.responses)).toBe(true);
-    expect(body.responses.length).toBeGreaterThanOrEqual(3);
-    expect(body.responses.length).toBeLessThanOrEqual(6);
+    const panelResponses = body.responses.filter((item: { id: string }) => item.id !== 'moderator');
+    expect(panelResponses.length).toBeGreaterThanOrEqual(3);
+    expect(panelResponses.length).toBeLessThanOrEqual(6);
+    expect(body.responses[body.responses.length - 1]?.id).toBe('moderator');
     expect(body.sessionId).toBe('lambda-e2e-greeting');
   });
 

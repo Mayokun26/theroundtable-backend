@@ -16,8 +16,9 @@ describe('response contract', () => {
     });
 
     const responses = await runConversationTurn(request);
+    const panelResponses = responses.filter((response) => response.id !== 'moderator');
 
-    for (const response of responses) {
+    for (const response of panelResponses) {
       expect(sentenceCount(response.content)).toBeLessThanOrEqual(2);
     }
   });
@@ -30,11 +31,12 @@ describe('response contract', () => {
     });
 
     const responses = await runConversationTurn(request);
-    expect(responses.length).toBeGreaterThanOrEqual(3);
-    expect(responses.length).toBeLessThanOrEqual(6);
-    expect(new Set(responses.map((response) => response.id)).size).toBe(3);
+    const panelResponses = responses.filter((response) => response.id !== 'moderator');
+    expect(panelResponses.length).toBeGreaterThanOrEqual(3);
+    expect(panelResponses.length).toBeLessThanOrEqual(6);
+    expect(new Set(panelResponses.map((response) => response.id)).size).toBe(3);
 
-    for (const response of responses) {
+    for (const response of panelResponses) {
       expect(sentenceCount(response.content)).toBeGreaterThanOrEqual(2);
     }
   });
@@ -47,16 +49,17 @@ describe('response contract', () => {
     });
 
     const responses = await runConversationTurn(request);
+    const panelResponses = responses.filter((response) => response.id !== 'moderator');
 
-    if (responses.length <= 1) {
+    if (panelResponses.length <= 1) {
       return;
     }
 
-    const names = responses.map((response) => response.name);
-    const referencedCount = responses.filter((response) =>
+    const names = panelResponses.map((response) => response.name);
+    const referencedCount = panelResponses.filter((response) =>
       names.some((name) => name !== response.name && response.content.includes(name))
     ).length;
 
-    expect(referencedCount).toBeGreaterThanOrEqual(Math.ceil(responses.length / 2));
+    expect(referencedCount).toBeGreaterThanOrEqual(Math.ceil(panelResponses.length / 2));
   });
 });
