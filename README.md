@@ -18,7 +18,7 @@ Backend service for TheRoundTable panel-conversation app.
 
 ## Setup
 
-Requires Node.js 22+ (deployed on AWS Lambda nodejs24.x).
+Requires Node.js 22+. On AWS Lambda, use the `nodejs22.x` or `nodejs24.x` runtime.
 
 ```bash
 npm install
@@ -27,14 +27,16 @@ cp .env.example .env
 
 ## Model configuration
 
-- `OPENAI_MODEL` (default `gpt-6-luna`). Any Chat Completions model ID; `gpt-5.6-luna` is the tested fallback.
-- `OPENAI_REASONING_EFFORT` (default `none`). With `none`, the per-style temperature applies and replies stay fast. Other values drop temperature and add 4096 tokens of reasoning headroom. Legacy `gpt-4o`/`gpt-4.1`/`gpt-3.5` models skip this setting.
+- `OPENAI_MODEL` (default `gpt-6-luna`). `gpt-6-sol` and `gpt-5.6-luna` take the same request shape. Models that don't accept `reasoning_effort: none`, such as the o-series and the original `gpt-5` family, need `OPENAI_REASONING_EFFORT=low` or higher.
+- `OPENAI_REASONING_EFFORT` (default `none`). With `none`, the per-style temperature applies and replies stay fast. Other values drop temperature and add 4096 tokens of reasoning headroom; `high` and above can run past `OPENAI_TIMEOUT_MS`, and a timed-out request gets the built-in fallback reply. Legacy `gpt-4o`/`gpt-4.1`/`gpt-3.5` models skip this setting.
 - Requests send `max_completion_tokens`; `max_tokens` is deprecated.
 
 ## Run
 ```bash
 npm run dev
 ```
+
+The HTTP server checks DynamoDB at startup and exits if it can't describe the `${PROJECT_NAME}-users-${ENVIRONMENT}` table (`theroundtable-users-dev` by default), so it needs AWS credentials for an account that has that table. The tests and the Lambda handler don't.
 
 ## Build
 ```bash
