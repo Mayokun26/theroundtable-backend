@@ -2,6 +2,9 @@
   "name": "theroundtable-backend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "clean": "rm -rf dist coverage",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
@@ -38,7 +41,7 @@
     "express-rate-limit": "^7.0.0",
     "helmet": "^7.0.0",
     "ioredis": "^5.0.0",
-    "openai": "^4.104.0",
+    "openai": "^7.28.0",
     "winston": "^3.11.0",
     "zod": "^3.22.0"
   },

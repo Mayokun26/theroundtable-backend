@@ -17,6 +17,9 @@ Backend service for TheRoundTable panel-conversation app.
 - Session memory persisted in Redis when available.
 
 ## Setup
+
+Requires Node.js 22+ (deployed on AWS Lambda nodejs24.x).
+
 ```bash
 npm install
 cp .env.example .env
