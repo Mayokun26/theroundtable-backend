@@ -18,12 +18,12 @@ export function buildCompletionParams(
 ): ChatParams {
   if (LEGACY_CHAT_MODEL.test(model)) return { model, temperature, max_completion_tokens: maxTokens };
 
-  // OpenAI SDK v4 types lag the API's supported reasoning effort values.
-  const reasoning_effort = effort as ChatParams['reasoning_effort'];
-  if (effort === 'none') return { model, reasoning_effort, temperature, max_completion_tokens: maxTokens };
+  if (effort === 'none') {
+    return { model, reasoning_effort: effort, temperature, max_completion_tokens: maxTokens };
+  }
 
   // Reasoning tokens count against max_completion_tokens, so reserve output headroom.
-  return { model, reasoning_effort, max_completion_tokens: maxTokens + REASONING_TOKEN_HEADROOM };
+  return { model, reasoning_effort: effort, max_completion_tokens: maxTokens + REASONING_TOKEN_HEADROOM };
 }
 
 interface PanelGenerationInput {
