@@ -1,8 +1,30 @@
 import { OpenAI } from 'openai';
-import { getEnv } from '../../config/env';
+import type { ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions';
+import { AppEnv, getEnv } from '../../config/env';
 import { logger } from '../../utils/logger';
 import { Character, ConversationResponse, ResponseStyle, SessionContext, TargetingAnalysis } from '../../types/conversation';
 import { buildPanelPrompt } from './prompt/v1/panelPrompt';
+
+type ChatParams = Omit<ChatCompletionCreateParamsNonStreaming, 'messages'>;
+// Older Chat Completions models accept temperature but not reasoning_effort.
+const LEGACY_CHAT_MODEL = /^(gpt-3\.5|gpt-4o|gpt-4\.1|gpt-4-|gpt-4$|chatgpt-4o)/;
+export const REASONING_TOKEN_HEADROOM = 4096;
+
+export function buildCompletionParams(
+  model: string,
+  effort: AppEnv['OPENAI_REASONING_EFFORT'],
+  maxTokens: number,
+  temperature: number
+): ChatParams {
+  if (LEGACY_CHAT_MODEL.test(model)) return { model, temperature, max_completion_tokens: maxTokens };
+
+  // OpenAI SDK v4 types lag the API's supported reasoning effort values.
+  const reasoning_effort = effort as ChatParams['reasoning_effort'];
+  if (effort === 'none') return { model, reasoning_effort, temperature, max_completion_tokens: maxTokens };
+
+  // Reasoning tokens count against max_completion_tokens, so reserve output headroom.
+  return { model, reasoning_effort, max_completion_tokens: maxTokens + REASONING_TOKEN_HEADROOM };
+}
 
 interface PanelGenerationInput {
   message: string;
@@ -335,13 +357,12 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
     input.turnPlanCharacters.length || input.respondingCharacters.length,
     input.message.length
   );
+  const params = buildCompletionParams(env.OPENAI_MODEL, env.OPENAI_REASONING_EFFORT, maxTokens, temperature);
 
   try {
     const completion = await withTimeout(
       client.chat.completions.create({
-        model: env.OPENAI_MODEL,
-        temperature,
-        max_tokens: maxTokens,
+        ...params,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -393,6 +414,8 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
       requestId: input.requestId,
       sessionId: input.sessionId,
       source: 'openai',
+      model: completion.model ?? params.model,
+      reasoningEffort: params.reasoning_effort ?? 'n/a',
       durationMs: Date.now() - startedAt,
       responderCount: responses.length,
       promptChars: systemPrompt.length + userPrompt.length,
@@ -406,6 +429,7 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
     logger.warn('OpenAI generation failed; using deterministic fallback.', {
       requestId: input.requestId,
       sessionId: input.sessionId,
+      model: params.model,
       durationMs: Date.now() - startedAt,
       error: error instanceof Error ? error.message : 'Unknown error',
       consecutiveOpenAIFailures,

@@ -16,6 +16,27 @@ describe('env config', () => {
     expect(env.PORT).toBe(3001);
     expect(env.AWS_REGION).toBe('us-east-1');
     expect(env.RESPONSE_GENERATOR_MODE).toBe('auto');
+    expect(env.OPENAI_MODEL).toBe('gpt-6-luna');
+    expect(env).toHaveProperty('OPENAI_REASONING_EFFORT', 'none');
+  });
+
+  it('respects OpenAI model and reasoning effort overrides', () => {
+    process.env = {
+      OPENAI_MODEL: 'gpt-5.6-luna',
+      OPENAI_REASONING_EFFORT: 'low',
+    };
+    resetEnvCacheForTests();
+
+    const env = getEnv();
+    expect(env.OPENAI_MODEL).toBe('gpt-5.6-luna');
+    expect(env).toHaveProperty('OPENAI_REASONING_EFFORT', 'low');
+  });
+
+  it('rejects an invalid OpenAI reasoning effort', () => {
+    process.env = { OPENAI_REASONING_EFFORT: 'turbo' };
+    resetEnvCacheForTests();
+
+    expect(() => getEnv()).toThrow();
   });
 
   it('throws in production when OpenAI key is missing and deterministic mode is off', () => {

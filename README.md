@@ -6,7 +6,7 @@ Backend service for TheRoundTable panel-conversation app.
 - Node.js + TypeScript
 - Express (HTTP runtime)
 - AWS Lambda handler (same core services as HTTP)
-- OpenAI (response generation)
+- OpenAI Chat Completions (default model gpt-6-luna)
 - Redis (session memory, with in-memory fallback)
 - DynamoDB (connectivity + table naming config)
 
@@ -21,6 +21,12 @@ Backend service for TheRoundTable panel-conversation app.
 npm install
 cp .env.example .env
 ```
+
+## Model configuration
+
+- `OPENAI_MODEL` (default `gpt-6-luna`). Any Chat Completions model ID; `gpt-5.6-luna` is the tested fallback.
+- `OPENAI_REASONING_EFFORT` (default `none`). With `none`, the per-style temperature applies and replies stay fast. Other values drop temperature and add 4096 tokens of reasoning headroom. Legacy `gpt-4o`/`gpt-4.1`/`gpt-3.5` models skip this setting.
+- Requests send `max_completion_tokens`; `max_tokens` is deprecated.
 
 ## Run
 ```bash

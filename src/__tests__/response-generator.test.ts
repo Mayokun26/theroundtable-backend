@@ -76,6 +76,8 @@ describe('response generator', () => {
   it('uses openai output when available', async () => {
     process.env.RESPONSE_GENERATOR_MODE = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
+    delete process.env.OPENAI_MODEL;
+    delete process.env.OPENAI_REASONING_EFFORT;
 
     const createMock = jest.fn().mockResolvedValue({
       choices: [
@@ -107,6 +109,83 @@ describe('response generator', () => {
     });
 
     expect(createMock).toHaveBeenCalled();
+    expect(responses[0].content).toBe('Socrates response');
+    expect(responses[1].content).toBe('Curie response');
+    const req = createMock.mock.calls[0][0];
+    expect(req).toMatchObject({
+      model: 'gpt-6-luna',
+      reasoning_effort: 'none',
+      temperature: 0.78,
+      max_completion_tokens: 540,
+    });
+    expect(req).not.toHaveProperty('max_tokens');
+    expect(req.messages.map((message: { role: string }) => message.role)).toEqual(['system', 'user']);
+  });
+
+  it('omits temperature and adds headroom for low reasoning effort', async () => {
+    process.env.RESPONSE_GENERATOR_MODE = 'openai';
+    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.OPENAI_MODEL = 'gpt-6-luna';
+    process.env.OPENAI_REASONING_EFFORT = 'low';
+
+    const createMock = jest.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({
+        responses: [
+          { characterId: '1', content: 'Socrates response' },
+          { characterId: '2', content: 'Curie response' },
+        ],
+      }) } }],
+    });
+    const module = await loadGeneratorWithMock(createMock);
+
+    await module.generatePanelResponses({
+      message: 'Discuss evidence',
+      sessionId: 'openai-low-effort',
+      panelCharacters: baseCharacters,
+      respondingCharacters: baseCharacters,
+      turnPlanCharacters: baseCharacters,
+      style: 'moderate_engagement',
+      targeting,
+      memoryContext,
+    });
+
+    const req = createMock.mock.calls[0][0];
+    expect(req).toMatchObject({ model: 'gpt-6-luna', reasoning_effort: 'low', max_completion_tokens: 4636 });
+    expect(req).not.toHaveProperty('temperature');
+    expect(req).not.toHaveProperty('max_tokens');
+  });
+
+  it('uses a legacy model override without reasoning effort', async () => {
+    process.env.RESPONSE_GENERATOR_MODE = 'openai';
+    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.OPENAI_MODEL = 'gpt-4o';
+    delete process.env.OPENAI_REASONING_EFFORT;
+
+    const createMock = jest.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({
+        responses: [
+          { characterId: '1', content: 'Socrates response' },
+          { characterId: '2', content: 'Curie response' },
+        ],
+      }) } }],
+    });
+    const module = await loadGeneratorWithMock(createMock);
+
+    const responses = await module.generatePanelResponses({
+      message: 'Discuss evidence',
+      sessionId: 'openai-legacy-model',
+      panelCharacters: baseCharacters,
+      respondingCharacters: baseCharacters,
+      turnPlanCharacters: baseCharacters,
+      style: 'moderate_engagement',
+      targeting,
+      memoryContext,
+    });
+
+    const req = createMock.mock.calls[0][0];
+    expect(req).toMatchObject({ model: 'gpt-4o', temperature: 0.78, max_completion_tokens: 540 });
+    expect(req).not.toHaveProperty('reasoning_effort');
+    expect(req).not.toHaveProperty('max_tokens');
     expect(responses[0].content).toBe('Socrates response');
     expect(responses[1].content).toBe('Curie response');
   });

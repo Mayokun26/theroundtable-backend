@@ -20,7 +20,8 @@ const envSchema = z.object({
   REDIS_URL: z.string().optional(),
 
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_MODEL: z.string().default('gpt-4o'),
+  OPENAI_MODEL: z.string().default('gpt-6-luna'),
+  OPENAI_REASONING_EFFORT: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']).default('none'),
   OPENAI_TIMEOUT_MS: z.coerce.number().default(12000),
   OPENAI_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().default(3),
   OPENAI_CIRCUIT_BREAKER_COOLDOWN_MS: z.coerce.number().default(30000),
