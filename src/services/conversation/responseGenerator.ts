@@ -378,11 +378,15 @@ export async function generatePanelResponses(input: PanelGenerationInput): Promi
 
     const parsed = parsePanelOutput(rawOutput);
     const turns = input.turnPlanCharacters.length > 0 ? input.turnPlanCharacters : input.respondingCharacters;
+    // Models sometimes label a reply with the character's name instead of its id; map names back to ids.
+    const idByName = new Map(turns.map((character) => [character.name.trim().toLowerCase(), character.id]));
     const queuedById = new Map<string, string[]>();
     for (const response of parsed.responses) {
-      const queued = queuedById.get(response.characterId) ?? [];
+      const rawId = String(response.characterId ?? '').trim();
+      const characterId = idByName.get(rawId.toLowerCase()) ?? rawId;
+      const queued = queuedById.get(characterId) ?? [];
       queued.push(response.content);
-      queuedById.set(response.characterId, queued);
+      queuedById.set(characterId, queued);
     }
 
     const responses = turns.map((character, index) => {

@@ -122,6 +122,39 @@ describe('response generator', () => {
     expect(req.messages.map((message: { role: string }) => message.role)).toEqual(['system', 'user']);
   });
 
+  it('matches model replies labeled with a character name instead of an id', async () => {
+    process.env.RESPONSE_GENERATOR_MODE = 'openai';
+    process.env.OPENAI_API_KEY = 'test-key';
+
+    const createMock = jest.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({
+        responses: [
+          { characterId: 'Socrates', content: 'Socrates response' },
+          { characterId: ' marie curie ', content: 'Curie response' },
+        ],
+      }) } }],
+    });
+
+    const module = await loadGeneratorWithMock(createMock);
+
+    const responses = await module.generatePanelResponses({
+      message: 'Discuss evidence',
+      sessionId: 'openai-name-ids',
+      panelCharacters: baseCharacters,
+      respondingCharacters: baseCharacters,
+      turnPlanCharacters: baseCharacters,
+      style: 'moderate_engagement',
+      targeting,
+      memoryContext,
+      requestId: 'req-name-ids',
+    });
+
+    expect(responses.map((response: { content: string }) => response.content)).toEqual([
+      'Socrates response',
+      'Curie response',
+    ]);
+  });
+
   it('omits temperature and adds headroom for low reasoning effort', async () => {
     process.env.RESPONSE_GENERATOR_MODE = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
